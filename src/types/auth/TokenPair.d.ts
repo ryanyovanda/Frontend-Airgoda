@@ -11,7 +11,7 @@ export interface TokenClaims extends JwtPayload {
 }
 
 export interface LoginResponse {
-  code: number;
+  statusCode: number;
   messages: string[];
   data: TokenPair;
 }

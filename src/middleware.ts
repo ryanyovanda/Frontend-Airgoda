@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
 
 const PUBLIC_PATHS = ["/login", "/register", "/transactiondetail"];
-const PROTECTED_PATHS = ["/dashboard"];
+const PROTECTED_PATHS = ["/dashboard", "/trx/reports"];
 const ROLE_PATHS = {
   ORGANIZER: ["/dashboard"],
   // Admin can access everything

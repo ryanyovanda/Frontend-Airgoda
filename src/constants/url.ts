@@ -5,4 +5,7 @@ export const API_URL = {
     refresh: "/api/v1/auth/refresh",
     me: "/api/v1/auth/me",
   },
+  user: {
+    detail: "/api/v1/users",
+  }
 };
