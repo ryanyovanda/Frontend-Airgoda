@@ -1,5 +1,6 @@
 import NextAuth, { User } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import { API_URL } from "./constants/url";
 import { LoginResponse, TokenClaims } from "./types/auth/TokenPair";
 import { jwtDecode } from "jwt-decode";
@@ -14,9 +15,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
     maxAge: 60 * 60 * 1,
   },
-  secret: process.env.AUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",
   providers: [
+    // ✅ Google OAuth Provider
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+
+    // ✅ Credentials Provider (Custom Backend Login)
     Credentials({
       name: "credentials",
       credentials: {
@@ -32,32 +40,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           },
           body: JSON.stringify({ email, password }),
         });
-      
+
         if (!response.ok) {
           return null;
         }
-      
+
         const { data } = (await response.json()) as LoginResponse;
-      
+
         // Verify the JWT signature
         const secret = process.env.JWT_SECRET;
         if (!secret) {
           console.error("JWT secret not set");
           return null;
         }
-      
+
         try {
           jwt.verify(data.accessToken, secret);
         } catch (err) {
           console.error("JWT verification failed:", err);
           return null;
         }
-      
+
         const decodedToken = jwtDecode<TokenClaims>(data.accessToken);
-      
+
         // Extract claims from the decoded token
         const { sub, scope, userId } = decodedToken;
-      
+
         const parsedResponse: User = {
           email: sub,
           token: {
@@ -73,24 +81,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           roles: scope.split(" "),
           userId: parseInt(userId),
         };
-      
+
         return parsedResponse ?? null;
       }
     }),
   ],
   callbacks: {
     async session({ session, token }) {
-      session.accessToken = token.accessToken.value;
-      session.refreshToken = token.refreshToken.value;
+      session.accessToken = token.accessToken?.value;
+      session.refreshToken = token.refreshToken?.value;
       session.user = {
         ...session.user,
         roles: token.roles,
-        id: token.accessToken.claims.userId,
+        id: token.accessToken?.claims?.userId,
       };
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account, profile }) {
       console.log("IN JWT CALLBACK: ", user);
+
+      // ✅ Handle Google Login Token
+      if (account?.provider === "google") {
+        token.sub = profile?.sub;
+        token.email = profile?.email;
+        token.name = profile?.name;
+        token.picture = profile?.picture;
+      }
+
+      // ✅ Handle Credentials Login Token
       if (user) {
         token = {
           accessToken: {
@@ -105,14 +123,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           userId: user.userId,
         };
       }
-      
 
       // Handle access token expiration
       if (
-        token.accessToken.claims.exp &&
+        token.accessToken?.claims?.exp &&
         Date.now() >= token.accessToken.claims.exp * 1000
       ) {
-        const newToken = await refreshToken(token.refreshToken.value);
+        const newToken = await refreshToken(token.refreshToken?.value);
         if (!newToken) {
           return null;
         }
@@ -120,9 +137,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return token;
     },
-    async signIn({ user }) {
+    async signIn({ user, account }) {
       console.log("IN SIGNIN CALLBACK: ", user);
-      return true;
+
+      // Allow sign-in from both Google and Credentials
+      if (account?.provider === "google" || account?.provider === "credentials") {
+        return true;
+      }
+      return false;
     },
   },
 });
@@ -136,10 +158,12 @@ const refreshToken = async (refreshToken: string) => {
     },
     body: JSON.stringify({ token: refreshToken }),
   });
+
   if (!response.ok) {
     console.error("Failed to refresh access token");
     return null;
   }
+
   const { data } = (await response.json()) as LoginResponse;
 
   // Verify the JWT signature
