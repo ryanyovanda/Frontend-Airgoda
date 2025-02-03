@@ -62,6 +62,7 @@ const LoginPage: FC = () => {
   };
 
   return (
+    <div className="flex items-center justify-center">
     <div className="h-screen flex items-center justify-center">
       <div className="w-fit h-fit flex flex-col gap-4">
         <h1 className="text-2xl font-bold">Login</h1>
@@ -102,6 +103,10 @@ const LoginPage: FC = () => {
           )}
         </Formik>
       </div>
+      <div>
+        
+      </div>
+    </div>
     </div>
   );
 };
