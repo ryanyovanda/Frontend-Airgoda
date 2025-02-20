@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import BookingForm from "@/app/components/forms/BookingForm";
 
 const PropertyDetails = ({ data }) => {
   return (
@@ -23,7 +24,7 @@ const PropertyDetails = ({ data }) => {
           data.roomVariants.map((room, index) => (
             <div key={index} className="border p-4 rounded-md">
               <h3 className="text-lg font-medium">{room.name}</h3>
-              <p className="text-gray-600">Price: ${room.price} / night</p>
+              <p className="text-gray-600">Price: Rp. {room.price} / night</p>
             </div>
           ))
         ) : (
@@ -31,11 +32,10 @@ const PropertyDetails = ({ data }) => {
         )}
       </div>
 
-      {/* Book Now Button */}
-      <div className="mt-6 text-center">
-        <Link href={`/booking/${data.id}`}>
-          <button className="bg-blue-500 text-white px-6 py-3 rounded-lg text-lg">Book Now</button>
-        </Link>
+      {/* Booking Form */}
+      <div className="mt-6 p-4 border rounded-lg shadow-md">
+        <h2 className="text-xl font-semibold text-center">Book this property</h2>
+        <BookingForm propertyId={data.id} />
       </div>
     </div>
   );
