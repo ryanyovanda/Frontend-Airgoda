@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import BookingForm from "@/app/components/forms/BookingForm";
 
+
 const PropertyDetails = ({ data }) => {
   return (
     <div className="max-w-4xl mx-auto p-6 border rounded-lg shadow-md">
@@ -35,7 +36,7 @@ const PropertyDetails = ({ data }) => {
       {/* Booking Form */}
       <div className="mt-6 p-4 border rounded-lg shadow-md">
         <h2 className="text-xl font-semibold text-center">Book this property</h2>
-        <BookingForm propertyId={data.id} />
+        <BookingForm propertyId={data.id} roomVariants={data.roomVariants || []} />
       </div>
     </div>
   );

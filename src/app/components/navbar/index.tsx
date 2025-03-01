@@ -15,14 +15,6 @@ const Navbar = () => {
         <Image src="/logo.png" alt="Airbnb Logo" width={100} height={40} />
       </div>
 
-      <div className="hidden md:flex space-x-6 text-gray-700">
-        <Link href="#" className="hover:text-black font-medium">
-          Stays
-        </Link>
-        <Link href="#" className="hover:text-black font-medium">
-          Experiences
-        </Link>
-      </div>
       
       <div className="flex items-center space-x-4">
         <span className="hidden md:block text-gray-600 hover:text-black cursor-pointer">
@@ -36,7 +28,7 @@ const Navbar = () => {
           {session && (
                                     <button
                                         onClick={() => signOut()}
-                                        className="text-white hover:bg-white hover:text-[#232323] rounded-lg p-2 ease-in-out duration-300 transition"
+                                        className="rounded-lg p-2 ease-in-out duration-300 transition"
                                     >
                                         Logout
                                     </button>

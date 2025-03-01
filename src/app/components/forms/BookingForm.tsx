@@ -2,77 +2,118 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { fetchData } from "@/constants/api";
 
-const BookingForm = ({ propertyId, roomVariants = [] }) => { 
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [guests, setGuests] = useState(1);
-  const [selectedRoomVariant, setSelectedRoomVariant] = useState("");
-  const [loading, setLoading] = useState(false);
+interface RoomVariant {
+  id: number;
+  name: string;
+  price: number;
+}
+
+interface SessionData {
+  accessToken?: string;
+  user?: { id: number };
+}
+
+interface BookingFormProps {
+  propertyId: string;
+  roomVariants?: RoomVariant[];
+}
+
+const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = [] }) => {
+  const [checkIn, setCheckIn] = useState<string>("");
+  const [checkOut, setCheckOut] = useState<string>("");
+  const [guests, setGuests] = useState<number>(1);
+  const [selectedRoomVariant, setSelectedRoomVariant] = useState<number | "">("");
+  const [loading, setLoading] = useState<boolean>(false);
   const router = useRouter();
 
-  // Debugging: Log roomVariants data
   useEffect(() => {
-    console.log("🔍 roomVariants received in BookingForm:", roomVariants);
-  }, [roomVariants]);
-
-  // Ensure roomVariants has a default selected room
-  useEffect(() => {
-    if (Array.isArray(roomVariants) && roomVariants.length > 0) {
+    if (roomVariants.length > 0) {
       setSelectedRoomVariant(roomVariants[0].id);
     }
   }, [roomVariants]);
 
-  const handleBooking = async (e) => {
+  const fetchSession = async (): Promise<SessionData | null> => {
+    try {
+      console.log("🔍 Fetching session data...");
+      const res = await fetch("/api/auth/session");
+      if (!res.ok) throw new Error("Failed to fetch session");
+      const data = await res.json();
+      console.log("✅ Session fetched:", data);
+      return data;
+    } catch (error) {
+      console.error("❌ Session fetch error:", error);
+      return null;
+    }
+  };
+
+  const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      const session = await fetch("/api/auth/session").then((res) => res.json());
-      console.log("🔍 Session Data:", session); // Debugging log
-
-      if (!session || !session.accessToken || !session.user?.id) {
-        console.error("🚨 Session is invalid. Redirecting to login.");
+    console.log("🔍 Fetching session data...");
+    const session = await fetchSession();
+    if (!session?.accessToken || !session?.user?.id) {
+        console.error("❌ No valid session found:", session);
         alert("Session expired. Please log in again.");
+        setLoading(false);
         return;
-      }
-
-      const payload = {
+    }
+    
+    const payload = {
         user: { id: session.user.id },
-        totalPrice: 0, // Backend will handle the calculation
+        totalPrice: 0,
         isPaid: false,
         orderItems: [
-          {
-            roomVariant: { id: selectedRoomVariant },
-            startDate: checkIn,
-            endDate: checkOut,
-            guest: guests,
-          },
+            {
+                roomVariant: { id: Number(selectedRoomVariant) },
+                startDate: checkIn,
+                endDate: checkOut,
+                guest: guests,
+            },
         ],
-      };
+    };
 
-      console.log("📦 Booking Payload:", payload); // Debugging log before API call
+    console.log("📌 Booking Request Payload:", JSON.stringify(payload, null, 2));
 
-      const response = await fetchData("/orders", "POST", payload);
-      const responseData = await response.json();
-      
-      console.log("✅ Response Status:", response.status);
-      console.log("✅ Response Data:", responseData);
+    try {
+      const response = await fetch("http://localhost:8080/orders", {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${session.accessToken}`,
+            "Content-Type": "application/json",
+        },
+        credentials: "include", // 🔹 Important for CORS
+        body: JSON.stringify(payload),
+    });
 
-      if (response.ok) {
+        console.log("📌 Response Status:", response.status);
+
+        if (!response.ok) {
+            let errorMessage = "Unknown error occurred.";
+            try {
+                const errorData = await response.json();
+                console.error("❌ API Error Response:", errorData);
+                errorMessage = errorData.message || errorMessage;
+            } catch (jsonError) {
+                console.error("❌ Failed to parse API error response:", jsonError);
+            }
+            alert(`Booking failed: ${errorMessage}`);
+            return;
+        }
+
+        const responseData = await response.json();
+        console.log("✅ Booking Success:", responseData);
         alert("🎉 Booking successful!");
         router.push("/dashboard");
-      } else {
-        alert(`Booking failed: ${responseData.message || "Unknown error"}`);
-      }
     } catch (error) {
-      console.error("❌ Error booking property:", error);
-      alert("An error occurred. Please try again.");
+        console.error("❌ Network or Unexpected Error:", error);
+        alert(`An unexpected error occurred: ${error instanceof Error ? error.message : error}`);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
+
 
   return (
     <div className="border p-4 rounded shadow-md">
@@ -80,11 +121,11 @@ const BookingForm = ({ propertyId, roomVariants = [] }) => {
         <label className="block">Select Room Variant:</label>
         <select
           value={selectedRoomVariant}
-          onChange={(e) => setSelectedRoomVariant(e.target.value)}
+          onChange={(e) => setSelectedRoomVariant(Number(e.target.value))}
           required
           className="w-full border p-2 rounded"
         >
-          {Array.isArray(roomVariants) && roomVariants.length > 0 ? (
+          {roomVariants.length > 0 ? (
             roomVariants.map((room) => (
               <option key={room.id} value={room.id}>
                 {room.name} - Rp. {room.price} / night
@@ -118,7 +159,7 @@ const BookingForm = ({ propertyId, roomVariants = [] }) => {
           type="number"
           value={guests}
           onChange={(e) => setGuests(parseInt(e.target.value, 10))}
-          min="1"
+          min={1}
           required
           className="w-full border p-2 rounded"
         />

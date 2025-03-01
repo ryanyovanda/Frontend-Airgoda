@@ -1,5 +1,5 @@
 import { FC } from "react";
-import Navbar from "./components/navbar";
+import Navbar from "@/app/components/navbar";
 import PropertyList from "./components/lists/PropertyList";
 
 const Home: FC = () => {
