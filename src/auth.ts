@@ -47,15 +47,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           const { data } = await response.json();
 
-          if (!process.env.JWT_SECRET) {
-            throw new Error("JWT secret not set");
+          if (!data?.accessToken || !process.env.JWT_SECRET) {
+            throw new Error("JWT secret or accessToken missing");
           }
 
           jwt.verify(data.accessToken, process.env.JWT_SECRET);
           const decodedToken = jwtDecode(data.accessToken);
 
           return {
+            id: decodedToken.userId,
             email: decodedToken.sub,
+            name: decodedToken.name || "Unknown User", // ✅ Ensure name is always present
+            imageUrl: decodedToken.imageUrl || null,
+            roles: decodedToken.scope?.split(" ") || [],
             token: {
               accessToken: {
                 claims: decodedToken,
@@ -66,9 +70,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 value: data.refreshToken,
               },
             },
-            roles: decodedToken.scope?.split(" ") || [],
-            userId: parseInt(decodedToken.userId),
-            imageUrl: decodedToken.imageUrl,
           } as User;
         } catch (error) {
           console.error("[AUTH ERROR] Login failed:", error);
@@ -83,14 +84,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.refreshToken = token.refreshToken.value;
       session.user = {
         ...session.user,
-        roles: token.roles,
-        id: token.accessToken.claims.userId,
+        id: token.userId,
         email: token.accessToken.claims.sub,
-        imageUrl: token.imageUrl,
+        name: token.name, // ✅ Ensure name is passed in session
+        imageUrl: token.imageUrl || null,
+        roles: token.roles,
       };
       return session;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user) {
         token = {
           accessToken: {
@@ -102,16 +104,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             value: user.token.refreshToken.value,
           },
           roles: user.roles,
-          userId: user.userId,
-          imageUrl: user.imageUrl,
+          userId: user.id,
+          imageUrl: user.imageUrl || null,
+          name: user.name, // ✅ Store name in JWT
         };
       }
 
+      // 🔄 Refresh token logic before expiration
       if (token.accessToken.claims.exp * 1000 < Date.now()) {
+        console.log("[AUTH] Access token expired, refreshing...");
         const newToken = await refreshToken(token.refreshToken.value);
         if (!newToken) return null;
         token.accessToken = newToken;
       }
+
       return token;
     },
     async signIn({ user, account }) {
@@ -144,9 +150,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             value: data.refreshToken,
           },
         };
-        user.roles = decodedToken.scope.split(" ");
-        user.userId = parseInt(decodedToken.userId);
-        user.imageUrl = decodedToken.imageUrl;
+        user.roles = decodedToken.scope?.split(" ") || [];
+        user.userId = decodedToken.userId;
+        user.imageUrl = decodedToken.imageUrl || null;
+        user.name = decodedToken.name || "Google User"; // ✅ Ensure name is set
       }
       return true;
     },
@@ -163,7 +170,7 @@ const refreshToken = async (refreshToken) => {
     },
     body: JSON.stringify({ token: refreshToken }),
   });
-  
+
   if (!response.ok) return null;
   const { data } = await response.json();
   jwt.verify(data.accessToken, process.env.JWT_SECRET);

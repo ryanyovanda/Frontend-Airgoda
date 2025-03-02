@@ -18,7 +18,7 @@ const Navbar = () => {
       
       <div className="flex items-center space-x-4">
         <span className="hidden md:block text-gray-600 hover:text-black cursor-pointer">
-          Airbnb your home
+        Welcome, {session?.user?.name}
           {session?.user.roles?.includes("USER") && (
            <Link href="/register/organizer" className=" hover:bg-white hover:text-[#232323] rounded-lg p-2 ease-in-out duration-300 transition">Create Event</Link>
             )}
