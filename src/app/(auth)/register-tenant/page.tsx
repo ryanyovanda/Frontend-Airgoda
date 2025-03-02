@@ -13,8 +13,7 @@ const Register = () => {
   const initialValues = {
     email: '',
     password: '',
-    confirmPassword: '',
-    pin: '',
+    confirmPassword: ''
   };
 
   const validationSchema = Yup.object({
@@ -22,10 +21,7 @@ const Register = () => {
     password: Yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
     confirmPassword: Yup.string()
       .oneOf([Yup.ref('password'), null], 'Passwords must match')
-      .required('Confirm Password is required'),
-    pin: Yup.string()
-      .matches(/^\d{4}$/, 'PIN must be a 4-digit number')
-      .required('PIN is required'),
+      .required('Confirm Password is required')
   });
 
   const handleSubmit = async (values, { setSubmitting }) => {
@@ -41,7 +37,7 @@ const Register = () => {
         body: JSON.stringify({
           email: values.email,
           password: values.password,
-          pin: values.pin,
+          role: 'TENANT'
         }),
       });
 
@@ -82,11 +78,6 @@ const Register = () => {
                 <label className="block text-sm font-medium">Confirm Password</label>
                 <Field type="password" name="confirmPassword" className="w-full border p-2 rounded" />
                 <ErrorMessage name="confirmPassword" component="div" className="text-red-500 text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium">PIN (4 digits)</label>
-                <Field type="text" name="pin" className="w-full border p-2 rounded" />
-                <ErrorMessage name="pin" component="div" className="text-red-500 text-sm" />
               </div>
               <button
                 type="submit"
