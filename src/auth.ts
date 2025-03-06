@@ -60,6 +60,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             name: decodedToken.name || "Unknown User", // ✅ Ensure name is always present
             imageUrl: decodedToken.imageUrl || null,
             roles: decodedToken.scope?.split(" ") || [],
+            isVerified: decodedToken.isVerified,
             token: {
               accessToken: {
                 claims: decodedToken,
@@ -89,6 +90,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         name: token.name, // ✅ Ensure name is passed in session
         imageUrl: token.imageUrl || null,
         roles: token.roles,
+        isVerified: token.isVerified, 
       };
       return session;
     },
@@ -107,6 +109,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           userId: user.id,
           imageUrl: user.imageUrl || null,
           name: user.name, // ✅ Store name in JWT
+          isVerified: user.isVerified,
         };
       }
 

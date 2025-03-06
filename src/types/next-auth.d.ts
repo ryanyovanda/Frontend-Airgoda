@@ -14,6 +14,7 @@ declare module "next-auth" {
       email: string;
       roles: string[];
       name: string;
+      isVerified: boolean;
     } & DefaultSession["user"];
   }
 
@@ -33,6 +34,7 @@ declare module "next-auth" {
     token: UserTokenDetails;
     userId: number;
     name: string;
+    isVerified: boolean;
   }
 }
 
