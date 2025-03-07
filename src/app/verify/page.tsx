@@ -2,41 +2,67 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 const VerifyEmailPage = () => {
-  const [status, setStatus] = useState<"loading" | "success" | "error" | null>(null);
+  const { data: session, status } = useSession(); // ✅ Get session token from NextAuth
+  const [statusMessage, setStatusMessage] = useState<"loading" | "success" | "error" | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-    }
-  }, [token]);
+    if (status === "loading") return; // ✅ Wait for session to load
 
-  const handleVerify = async () => {
-    if (!token) return;
+    if (!session?.accessToken) {
+      console.error("🚨 No authentication token found. Redirecting to login.");
+      setStatusMessage("error");
+      setErrorMessage("Session expired. Please log in again.");
+      router.push("/login");
+      return;
+    }
+
+    if (!token) {
+      console.error("🚨 No verification token found in URL.");
+      setStatusMessage("error");
+      setErrorMessage("Verification token is missing.");
+      return;
+    }
+
+    handleVerify(session.accessToken);
+  }, [status, session, token]);
+
+  const handleVerify = async (authToken: string) => {
+    if (!authToken || !token) return;
 
     try {
-      const res = await fetch("http://localhost:8080/api/v1/users/verify-email", {
-        method: "POST",
+      console.log("🔍 Sending verification request with token:", token);
+      console.log("🔐 Using session auth token:", authToken);
+
+      const res = await fetch(`http://localhost:8080/api/v1/users/verify?token=${token}`, {
+        method: "GET",
         headers: {
+          "Authorization": `Bearer ${authToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ token }),
       });
 
-      if (!res.ok) throw new Error("Verification failed");
+      if (!res.ok) {
+        const errorResponse = await res.json();
+        console.error("❌ Server error response:", errorResponse);
+        throw new Error(errorResponse.message || "Verification failed");
+      }
 
-      setStatus("success");
+      setStatusMessage("success");
       alert("✅ Email successfully verified! Redirecting...");
       setTimeout(() => {
-        router.push("/profile"); // Redirect to profile page
+        router.push("/profile"); // Redirect after verification
       }, 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error("🚨 Verification Error:", error);
-      setStatus("error");
+      setStatusMessage("error");
+      setErrorMessage(error.message);
     }
   };
 
@@ -44,19 +70,11 @@ const VerifyEmailPage = () => {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-6 rounded-lg shadow-md text-center">
         <h1 className="text-2xl font-semibold">Email Verification</h1>
-        {status === "error" && <p className="text-red-500">Invalid verification link.</p>}
-        {status === "success" ? (
+        {statusMessage === "error" && <p className="text-red-500">{errorMessage || "Verification failed."}</p>}
+        {statusMessage === "success" ? (
           <p className="text-green-500">Your email has been verified! ✅ Redirecting...</p>
         ) : (
-          <>
-            <p className="text-gray-600">Click the button below to verify your email.</p>
-            <button
-              onClick={handleVerify}
-              className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Verify Email
-            </button>
-          </>
+          <p className="text-gray-600">Verifying your email, please wait...</p>
         )}
       </div>
     </div>
