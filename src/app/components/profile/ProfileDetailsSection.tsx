@@ -70,6 +70,32 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
     }
   };
 
+  const sendVerificationEmail = async () => {
+    try {
+      const BASE_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080/api/v1";
+
+      if (!user.email) {
+        alert("❌ No email found in user data!");
+        return;
+      }
+
+      const response = await fetch(`${BASE_API_URL}/api/v1/users/resend-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send verification email");
+      }
+
+      setEmailSent(true);
+      alert("✅ Verification email sent. Check your inbox!");
+    } catch (error) {
+      console.error("🚨 Error sending verification email:", error);
+    }
+  };
+
   return (
     <div className="bg-white p-6 shadow rounded-lg max-w-3xl mx-auto">
       <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
@@ -107,6 +133,27 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
           {isSubmitting ? "Updating..." : "Update Profile"}
         </button>
       </form>
+
+      {/* Email Verification Section */}
+      <div className="mt-6 p-4 border rounded-lg shadow-md">
+        <h2 className="text-lg font-semibold">Email Verification</h2>
+        {user.isVerified ? (
+          <p className="text-green-600">✅ Verified</p>
+        ) : (
+          <p className="text-red-500">❌ Not Verified</p>
+        )}
+
+        {!user.isVerified && !emailSent && (
+          <button
+            onClick={sendVerificationEmail}
+            className="text-blue-600 text-sm font-medium hover:underline mt-2"
+          >
+            Send Verification Email
+          </button>
+        )}
+
+        {emailSent && <p className="text-blue-500 mt-2">📩 Verification email sent!</p>}
+      </div>
     </div>
   );
 };
