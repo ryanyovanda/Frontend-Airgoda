@@ -31,7 +31,7 @@ const PropertyList = () => {
   useEffect(() => {
     const fetchProperties = async () => {
       console.log("Fetching properties with category:", selectedCategory);
-      const { content, totalPages } = await getAllProperties(page, size, selectedCategory ?? undefined); // ✅ Convert null to undefined
+      const { content, totalPages } = await getAllProperties(page, size, selectedCategory ?? null); // ✅ Convert undefined to null
       setProperties(content);
       setTotalPages(totalPages);
     };
