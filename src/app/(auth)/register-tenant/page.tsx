@@ -104,4 +104,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default RegisterTenant;

@@ -9,7 +9,24 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 import BookingForm from "@/app/components/forms/BookingForm";
 
-const fetchRoomVariants = async (propertyId) => {
+interface RoomVariant {
+  id: number;
+  name: string;
+  facilities?: string[];
+  price: number;
+}
+
+interface PropertyDetailsProps {
+  data: {
+    id: number;
+    name: string;
+    description: string;
+    location?: { name?: string };
+    imageUrls?: string[];
+  };
+}
+
+const fetchRoomVariants = async (propertyId: number): Promise<RoomVariant[]> => {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/room-variants/property/${propertyId}`);
     if (!response.ok) throw new Error("Failed to fetch room variants");
@@ -20,8 +37,8 @@ const fetchRoomVariants = async (propertyId) => {
   }
 };
 
-const PropertyDetails = ({ data }) => {
-  const [roomVariants, setRoomVariants] = useState([]);
+const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
+  const [roomVariants, setRoomVariants] = useState<RoomVariant[]>([]);
 
   useEffect(() => {
     fetchRoomVariants(data.id).then(setRoomVariants);
@@ -31,7 +48,6 @@ const PropertyDetails = ({ data }) => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 border rounded-lg shadow-md">
-      {/* ✅ Image Carousel with Swiper */}
       {data.imageUrls && data.imageUrls.length > 0 ? (
         <Swiper
           modules={[Navigation, Pagination]}
@@ -45,8 +61,8 @@ const PropertyDetails = ({ data }) => {
                 <Image
                   src={url}
                   alt={`Property Image ${index + 1}`}
-                  fill={true} // Fixed: Replaced layout="fill"
-                  sizes="(max-width: 768px) 100vw, 800px" // Fixed: Added sizes for Next.js optimization
+                  fill
+                  sizes="(max-width: 768px) 100vw, 800px"
                   className="object-cover rounded-lg"
                 />
               </div>
@@ -59,20 +75,18 @@ const PropertyDetails = ({ data }) => {
         </div>
       )}
 
-      {/* Property Info */}
       <h1 className="text-3xl font-bold mt-4">{data.name}</h1>
       <p className="text-gray-500 mt-1">{locationText}</p>
       <p className="mt-4">{data.description}</p>
 
-      {/* Room Variants */}
       <h2 className="text-2xl font-semibold mt-6">Available Rooms</h2>
       <div className="mt-2 space-y-2">
         {roomVariants.length > 0 ? (
-          roomVariants.map((room, index) => (
-            <div key={index} className="border p-4 rounded-md">
+          roomVariants.map((room) => (
+            <div key={room.id} className="border p-4 rounded-md">
               <h3 className="text-lg font-medium">{room.name}</h3>
               <div className="mt-2 text-sm text-gray-600">
-                <strong>Facilities:</strong> {room.facilities?.join(', ') || 'None'}
+                <strong>Facilities:</strong> {room.facilities?.join(", ") || "None"}
               </div>
               <p className="text-gray-600">Price: Rp. {room.price} / night</p>
             </div>
@@ -82,9 +96,8 @@ const PropertyDetails = ({ data }) => {
         )}
       </div>
 
-      {/* Booking Form */}
       <div className="mt-6">
-        <BookingForm propertyId={data.id} roomVariants={roomVariants}/>
+        <BookingForm propertyId={data.id} roomVariants={roomVariants} />
       </div>
     </div>
   );
