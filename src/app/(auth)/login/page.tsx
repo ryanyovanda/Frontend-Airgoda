@@ -8,6 +8,13 @@ import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 
+// Define TypeScript Interface for Form Values
+interface LoginFormValues {
+  email: string;
+  password: string;
+}
+
+// Form Validation Schema using Yup
 const validationSchema = Yup.object({
   email: Yup.string().email("Invalid email address").required("Email is required"),
   password: Yup.string().min(6, "Password must be at least 6 characters").required("Password is required"),
@@ -18,6 +25,7 @@ const LoginPage: FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Google Login Handler
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
@@ -33,7 +41,11 @@ const LoginPage: FC = () => {
     }
   };
 
-  const handleSubmit = async (values, { setSubmitting }) => {
+  // Handle Form Submission for Credentials Login
+  const handleSubmit = async (
+    values: LoginFormValues,
+    { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void }
+  ) => {
     setError(null);
     setIsLoading(true);
     try {
@@ -42,6 +54,7 @@ const LoginPage: FC = () => {
         email: values.email,
         password: values.password,
       });
+
       if (!result?.ok) {
         setError(result?.error || "An unexpected error occurred. Please try again.");
       } else {
@@ -63,6 +76,8 @@ const LoginPage: FC = () => {
         <p className="text-center text-gray-600">
           Sign up for free or log in to access amazing deals and benefits!
         </p>
+
+        {/* Google Login Button */}
         <button
           onClick={handleGoogleLogin}
           className="bg-[#8A2DE2] text-white p-2 rounded w-full flex justify-center items-center"
@@ -71,12 +86,20 @@ const LoginPage: FC = () => {
           <FontAwesomeIcon icon={faGoogle} className="mr-2" />
           {isLoading ? "Loading..." : "Sign in with Google"}
         </button>
+
+        {/* OR Separator */}
         <div className="flex items-center justify-center my-2">
           <div className="w-full border-t border-gray-300"></div>
           <span className="px-2 text-gray-500">or</span>
           <div className="w-full border-t border-gray-300"></div>
         </div>
-        <Formik initialValues={{ email: "", password: "" }} validationSchema={validationSchema} onSubmit={handleSubmit}>
+
+        {/* Formik Form for Email & Password Login */}
+        <Formik
+          initialValues={{ email: "", password: "" }}
+          validationSchema={validationSchema}
+          onSubmit={handleSubmit}
+        >
           {({ isSubmitting }) => (
             <Form className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
@@ -109,6 +132,8 @@ const LoginPage: FC = () => {
             </Form>
           )}
         </Formik>
+
+        {/* Terms & Privacy Policy */}
         <p className="text-center text-gray-500 text-sm">
           By signing in, I agree to Agoda&apos;s{" "}
           <a href="#" className="text-blue-500">
