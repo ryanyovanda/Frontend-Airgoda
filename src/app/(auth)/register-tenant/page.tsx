@@ -12,7 +12,7 @@ interface RegisterFormValues {
   confirmPassword: string;
 }
 
-const Register = () => {
+const RegisterTenant = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
