@@ -15,7 +15,7 @@ interface SessionData {
 }
 
 interface BookingFormProps {
-  propertyId: string;
+  propertyId: number; // ✅ Ensure propertyId is a number and used
   roomVariants?: RoomVariant[];
 }
 
@@ -23,7 +23,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
   const [checkIn, setCheckIn] = useState<string>("");
   const [checkOut, setCheckOut] = useState<string>("");
   const [guests, setGuests] = useState<number>(1);
-  const [selectedRoomVariant, setSelectedRoomVariant] = useState<number | "">("");
+  const [selectedRoomVariant, setSelectedRoomVariant] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const router = useRouter();
 
@@ -35,12 +35,9 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
 
   const fetchSession = async (): Promise<SessionData | null> => {
     try {
-      console.log("🔍 Fetching session data...");
       const res = await fetch("/api/auth/session");
       if (!res.ok) throw new Error("Failed to fetch session");
-      const data = await res.json();
-      console.log("✅ Session fetched:", data);
-      return data;
+      return await res.json();
     } catch (error) {
       console.error("❌ Session fetch error:", error);
       return null;
@@ -51,86 +48,67 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
     e.preventDefault();
     setLoading(true);
 
-    console.log("🔍 Fetching session data...");
     const session = await fetchSession();
     if (!session?.accessToken || !session?.user?.id) {
-        console.error("❌ No valid session found:", session);
-        alert("Session expired. Please log in again.");
-        setLoading(false);
-        return;
+      alert("Session expired. Please log in again.");
+      setLoading(false);
+      return;
     }
-    
+
+    if (!selectedRoomVariant) {
+      alert("Please select a room variant.");
+      setLoading(false);
+      return;
+    }
+
     const payload = {
-        user: { id: session.user.id },
-        totalPrice: 0,
-        isPaid: false,
-        orderItems: [
-            {
-                roomVariant: { id: Number(selectedRoomVariant) },
-                startDate: checkIn,
-                endDate: checkOut,
-                guest: guests,
-            },
-        ],
+      userId: session.user.id,
+      propertyId, // ✅ Now used in the request
+      roomVariantId: selectedRoomVariant,
+      checkIn,
+      checkOut,
+      guests,
+      isPaid: false,
+      totalPrice: 0,
     };
 
-    console.log("📌 Booking Request Payload:", JSON.stringify(payload, null, 2));
-
-    // Ensure NEXT_PUBLIC_BACKEND_URL is defined
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-    if (!backendUrl) {
-        console.error("❌ Missing environment variable: NEXT_PUBLIC_BACKEND_URL");
-        alert("Backend URL is not set. Please check your environment variables.");
-        setLoading(false);
-        return;
-    }
-
     try {
-        const response = await fetch(`${backendUrl}/orders`, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${session.accessToken}`,
-                "Content-Type": "application/json",
-            },
-            credentials: "include", // 🔹 Important for CORS
-            body: JSON.stringify(payload),
-        });
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (!backendUrl) {
+        throw new Error("Backend URL is not set in environment variables.");
+      }
 
-        console.log("📌 Response Status:", response.status);
+      const response = await fetch(`${backendUrl}/orders`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
 
-        if (!response.ok) {
-            let errorMessage = "Unknown error occurred.";
-            try {
-                const errorData = await response.json();
-                console.error("❌ API Error Response:", errorData);
-                errorMessage = errorData.message || errorMessage;
-            } catch (jsonError) {
-                console.error("❌ Failed to parse API error response:", jsonError);
-            }
-            alert(`Booking failed: ${errorMessage}`);
-            return;
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Booking failed.");
+      }
 
-        const responseData = await response.json();
-        console.log("✅ Booking Success:", responseData);
-        alert("🎉 Booking successful!");
-        router.push("/dashboard");
+      alert("🎉 Booking successful!");
+      router.push("/dashboard");
     } catch (error) {
-        console.error("❌ Network or Unexpected Error:", error);
-        alert(`An unexpected error occurred: ${error instanceof Error ? error.message : error}`);
+      console.error("❌ Booking error:", error);
+      alert(error instanceof Error ? error.message : "An unexpected error occurred.");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
-
-
+  };
 
   return (
     <div className="border p-4 rounded shadow-md">
       <form onSubmit={handleBooking}>
         <label className="block">Select Room Variant:</label>
         <select
-          value={selectedRoomVariant}
+          value={selectedRoomVariant || ""}
           onChange={(e) => setSelectedRoomVariant(Number(e.target.value))}
           required
           className="w-full border p-2 rounded"
