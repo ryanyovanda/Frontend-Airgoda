@@ -5,12 +5,19 @@ import * as Yup from 'yup';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+// Define TypeScript Interface for Form Values
+interface RegisterFormValues {
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
 const Register = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const initialValues = {
+  const initialValues: RegisterFormValues = {
     email: '',
     password: '',
     confirmPassword: ''
@@ -24,7 +31,10 @@ const Register = () => {
       .required('Confirm Password is required')
   });
 
-  const handleSubmit = async (values, { setSubmitting }) => {
+  const handleSubmit = async (
+    values: RegisterFormValues,
+    { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void }
+  ) => {
     setLoading(true);
     setError('');
 
@@ -49,7 +59,7 @@ const Register = () => {
       alert('Registration successful! Redirecting to login...');
       router.push('/login');
     } catch (error) {
-      setError(error.message);
+      setError(error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
       setSubmitting(false);
