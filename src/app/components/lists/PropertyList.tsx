@@ -13,7 +13,7 @@ interface Category {
 
 const PropertyList = () => {
   const [properties, setProperties] = useState([]);
-  const [categories, setCategories] = useState<Category[]>([]); // ✅ Explicitly typed
+  const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [size] = useState(9);
@@ -31,7 +31,7 @@ const PropertyList = () => {
   useEffect(() => {
     const fetchProperties = async () => {
       console.log("Fetching properties with category:", selectedCategory);
-      const { content, totalPages } = await getAllProperties(page, size, selectedCategory);
+      const { content, totalPages } = await getAllProperties(page, size, selectedCategory ?? undefined); // ✅ Convert null to undefined
       setProperties(content);
       setTotalPages(totalPages);
     };
