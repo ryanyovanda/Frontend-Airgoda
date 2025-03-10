@@ -5,18 +5,23 @@ import getAllProperties from "@/app/actions/getAllProperties.actions";
 import getPropertyCategories from "@/app/actions/getPropertyCategories.actions";
 import PropertyListCard from "./PropertyListCard";
 
+// ✅ Define Category Type
+interface Category {
+  id: number;
+  name: string;
+}
+
 const PropertyList = () => {
   const [properties, setProperties] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categories, setCategories] = useState<Category[]>([]); // ✅ Explicitly typed
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [size] = useState(9);
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    // ✅ Fetch categories once on mount
     const fetchCategories = async () => {
-      const categoryData = await getPropertyCategories();
+      const categoryData: Category[] = await getPropertyCategories();
       setCategories(categoryData);
     };
 
@@ -24,7 +29,6 @@ const PropertyList = () => {
   }, []);
 
   useEffect(() => {
-    // ✅ Fetch properties when `selectedCategory` or `page` changes
     const fetchProperties = async () => {
       console.log("Fetching properties with category:", selectedCategory);
       const { content, totalPages } = await getAllProperties(page, size, selectedCategory);
@@ -33,7 +37,7 @@ const PropertyList = () => {
     };
 
     fetchProperties();
-  }, [page, selectedCategory]); // ✅ Triggers re-fetch when category changes
+  }, [page, selectedCategory]);
 
   return (
     <div className="container mx-auto p-6">
@@ -50,7 +54,7 @@ const PropertyList = () => {
         {categories.map((category) => (
           <button
             key={category.id}
-            onClick={() => { setSelectedCategory(category.id); setPage(0); }} // ✅ Reset page when filtering
+            onClick={() => { setSelectedCategory(category.id); setPage(0); }}
             className={`px-4 py-2 rounded-lg border ${selectedCategory === category.id ? "bg-blue-500 text-white" : "bg-gray-200"}`}
           >
             {category.name}
