@@ -30,41 +30,39 @@ const VerifyEmailPage = () => {
       return;
     }
 
-    handleVerify(session.accessToken);
-  }, [status, session, token]);
+    const handleVerify = async () => {
+      try {
+        console.log("🔍 Sending verification request with token:", token);
+        console.log("🔐 Using session auth token:", session.accessToken);
 
-  const handleVerify = async (authToken: string) => {
-    if (!authToken || !token) return;
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/users/verify?token=${token}`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
 
-    try {
-      console.log("🔍 Sending verification request with token:", token);
-      console.log("🔐 Using session auth token:", authToken);
+        if (!res.ok) {
+          const errorResponse = await res.json();
+          console.error("❌ Server error response:", errorResponse);
+          throw new Error(errorResponse.message || "Verification failed");
+        }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/users/verify?token=${token}`, {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${authToken}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!res.ok) {
-        const errorResponse = await res.json();
-        console.error("❌ Server error response:", errorResponse);
-        throw new Error(errorResponse.message || "Verification failed");
+        setStatusMessage("success");
+        alert("✅ Email successfully verified! Redirecting...");
+        setTimeout(() => {
+          router.push("/profile"); // Redirect after verification
+        }, 2000);
+      } catch (error) {
+        console.error("🚨 Verification Error:", error);
+        setStatusMessage("error");
+        setErrorMessage(error instanceof Error ? error.message : "Something went wrong.");
       }
+    };
 
-      setStatusMessage("success");
-      alert("✅ Email successfully verified! Redirecting...");
-      setTimeout(() => {
-        router.push("/profile"); // Redirect after verification
-      }, 2000);
-    } catch (error: any) {
-      console.error("🚨 Verification Error:", error);
-      setStatusMessage("error");
-      setErrorMessage(error.message);
-    }
-  };
+    handleVerify();
+  }, [status, session, token, router]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">

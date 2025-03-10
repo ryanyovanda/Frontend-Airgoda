@@ -13,7 +13,7 @@ const getPropertyById = async (id: number) => {
       throw new Error("Failed to fetch property details");
     }
 
-    let property = await response.json();
+    const property = await response.json(); // Changed 'let' to 'const'
 
     // Fetch room variants for this property
     const roomResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/room-variants/property/${id}`, {
@@ -22,13 +22,10 @@ const getPropertyById = async (id: number) => {
       cache: "no-store",
     });
 
-    if (roomResponse.ok) {
-      property.roomVariants = await roomResponse.json();
-    } else {
-      property.roomVariants = [];
-    }
-
-    return property;
+    return {
+      ...property,
+      roomVariants: roomResponse.ok ? await roomResponse.json() : [],
+    };
   } catch (error) {
     console.error(error);
     return null;

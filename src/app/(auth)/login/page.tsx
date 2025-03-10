@@ -3,10 +3,10 @@
 import { FC, useState } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import { signIn,} from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGoogle } from "@fortawesome/free-brands-svg-icons"
+import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 
 const validationSchema = Yup.object({
   email: Yup.string().email("Invalid email address").required("Email is required"),
@@ -60,12 +60,15 @@ const LoginPage: FC = () => {
     <div className="flex items-center justify-center h-screen">
       <div className="w-fit h-fit flex flex-col gap-4 p-6 border border-gray-300 rounded-lg shadow-lg bg-white">
         <h1 className="text-2xl font-bold text-center">Sign in or create an account</h1>
-        <p className="text-center text-gray-600">Sign up for free or log in to access amazing deals and benefits!</p>
+        <p className="text-center text-gray-600">
+          Sign up for free or log in to access amazing deals and benefits!
+        </p>
         <button
           onClick={handleGoogleLogin}
           className="bg-[#8A2DE2] text-white p-2 rounded w-full flex justify-center items-center"
           disabled={isLoading}
-        ><FontAwesomeIcon icon={faGoogle} className="mr-2 "/>
+        >
+          <FontAwesomeIcon icon={faGoogle} className="mr-2" />
           {isLoading ? "Loading..." : "Sign in with Google"}
         </button>
         <div className="flex items-center justify-center my-2">
@@ -77,13 +80,22 @@ const LoginPage: FC = () => {
           {({ isSubmitting }) => (
             <Form className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <label htmlFor="email" className="font-medium">Email</label>
+                <label htmlFor="email" className="font-medium">
+                  Email
+                </label>
                 <Field id="email" type="email" name="email" className="border border-gray-300 p-2 rounded text-black" />
                 <ErrorMessage name="email" component="span" className="text-red-500" />
               </div>
               <div className="flex flex-col gap-2">
-                <label htmlFor="password" className="font-medium">Password</label>
-                <Field id="password" type="password" name="password" className="border border-gray-300 p-2 rounded text-black" />
+                <label htmlFor="password" className="font-medium">
+                  Password
+                </label>
+                <Field
+                  id="password"
+                  type="password"
+                  name="password"
+                  className="border border-gray-300 p-2 rounded text-black"
+                />
                 <ErrorMessage name="password" component="span" className="text-red-500" />
               </div>
               <button
@@ -98,7 +110,15 @@ const LoginPage: FC = () => {
           )}
         </Formik>
         <p className="text-center text-gray-500 text-sm">
-          By signing in, I agree to Agoda's <a href="#" className="text-blue-500">Terms of Use</a> and <a href="#" className="text-blue-500">Privacy Policy</a>.
+          By signing in, I agree to Agoda&apos;s{" "}
+          <a href="#" className="text-blue-500">
+            Terms of Use
+          </a>{" "}
+          and{" "}
+          <a href="#" className="text-blue-500">
+            Privacy Policy
+          </a>
+          .
         </p>
       </div>
     </div>
