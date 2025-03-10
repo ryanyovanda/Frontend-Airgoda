@@ -40,7 +40,7 @@ const VerifyEmailPage = () => {
       console.log("🔍 Sending verification request with token:", token);
       console.log("🔐 Using session auth token:", authToken);
 
-      const res = await fetch(`http://localhost:8080/api/v1/users/verify?token=${token}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/users/verify?token=${token}`, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${authToken}`,

@@ -73,7 +73,7 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
 
   const sendVerificationEmail = async () => {
     try {
-      const BASE_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080/api/v1";
+      const BASE_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1";
 
       if (!user.email) {
         alert("❌ No email found in user data!");

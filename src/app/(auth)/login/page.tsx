@@ -3,7 +3,7 @@
 import { FC, useState } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import { signIn, useSession } from "next-auth/react";
+import { signIn,} from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons"
