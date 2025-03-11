@@ -35,7 +35,7 @@ const ProfilePage = () => {
         console.log(`📡 Fetching user from API: /users/${userId}`);
         const BASE_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080/api/v1";
 
-        const res = await fetch(`${BASE_API_URL}/users/${userId}`, {
+        const res = await fetch(`${BASE_API_URL}/api/v1/users/${userId}`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${accessToken}`,
