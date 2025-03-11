@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import getPropertyById from "@/app/actions/getPropertyById.actions";
 import PropertyDetails from "../../components/details/PropertyDetails";
-import Navbar from "@/app/components/navbar";
 
 const PropertyPage = () => {
   const params = useParams();
@@ -56,7 +55,6 @@ const PropertyPage = () => {
 
   return (
     <>
-      <Navbar />
       <div className="container mx-auto p-6">
         <PropertyDetails data={property} />
       </div>

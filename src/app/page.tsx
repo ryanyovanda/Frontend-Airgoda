@@ -1,13 +1,12 @@
 import { FC } from "react";
-import Navbar from "@/app/components/navbar";
-import PropertyList from "./components/lists/PropertyList";
+import PropertyList from "@/app/components/lists/PropertyList";
+import HeroSlideshow from "@/app/components/heroslideshow";
 
 const Home: FC = () => {
   return (
     <>
-      <Navbar />
+    <HeroSlideshow />
       <div className="container mx-auto p-6">
-        <h1 className="text-2xl font-bold">Available Properties</h1>
         <PropertyList />
       </div>
     </>

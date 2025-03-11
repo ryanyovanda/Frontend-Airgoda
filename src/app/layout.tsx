@@ -3,12 +3,16 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
+import Navbar from "@/app/components/navbar";
+import Footer from "@/app/components/footer";
+
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
   weight: "100 900",
 });
+
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
@@ -22,19 +26,18 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const session = await auth();
+}: Readonly<{ children: React.ReactNode }>) {
+  const session = await auth(); // Fetch session
+
   return (
     <html lang="en">
-      <SessionProvider refetchInterval={120} session={session}>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-          {children}
-        </body>
-      </SessionProvider>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <SessionProvider refetchInterval={120} session={session}>
+          <Navbar /> 
+          <main>{children}</main> {/* Wraps page content */}
+          <Footer />
+        </SessionProvider>
+      </body>
     </html>
   );
 }
