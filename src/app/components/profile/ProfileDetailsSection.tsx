@@ -86,7 +86,7 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
 
       const BASE_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080/api/v1";
 
-      const response = await fetch(`${BASE_API_URL}/users/resend-verification`, {
+      const response = await fetch(`${BASE_API_URL}/api/v1/users/resend-verification`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: user.email }),
