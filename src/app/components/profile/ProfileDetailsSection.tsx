@@ -55,7 +55,7 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
 
       console.log("📡 Sending update request with payload:", JSON.stringify(payload));
 
-      const response = await fetch(`${BASE_API_URL}/users/profile`, {
+      const response = await fetch(`${BASE_API_URL}/api/v1/users/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

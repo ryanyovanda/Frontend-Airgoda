@@ -5,27 +5,25 @@ import { JWT } from "next-auth/jwt";
 import { jwtDecode } from "jwt-decode";
 import jwt from "jsonwebtoken";
 
-// --------------------------------------------------------------------
-// 1. Define token structures
-// --------------------------------------------------------------------
 interface DecodedToken {
   userId: string;
   sub: string;
   name?: string;
   imageUrl?: string | null;
-  scope: string; // always a string
+  scope: string;
   isVerified?: boolean;
   exp?: number;
 }
 
-type SafeDecodedToken = Omit<DecodedToken, "userId" | "scope"> & {
+interface TokenClaims {
   userId: string;
+  sub: string;
+  name?: string;
+  imageUrl?: string | null;
   scope: string;
-};
+  isVerified?: boolean;
+}
 
-// --------------------------------------------------------------------
-// 2. Extend NextAuth User type
-// --------------------------------------------------------------------
 interface CustomUser extends NextAuthUser {
   userId: string;
   imageUrl?: string | null;
@@ -33,38 +31,33 @@ interface CustomUser extends NextAuthUser {
   isVerified: boolean;
   token: {
     accessToken: {
-      claims: SafeDecodedToken;
+      claims: TokenClaims;
       value: string;
     };
     refreshToken: {
-      claims: SafeDecodedToken;
+      claims: TokenClaims;
       value: string;
     };
   };
 }
 
-// --------------------------------------------------------------------
-// 3. Define a CustomToken type that extends NextAuth's JWT
-// --------------------------------------------------------------------
 interface CustomToken extends JWT {
   accessToken: {
-    claims: SafeDecodedToken;
+    claims: TokenClaims;
     value: string;
   };
   refreshToken: {
-    claims: SafeDecodedToken;
+    claims: TokenClaims;
     value: string;
   };
   roles: string[];
   userId: string;
   imageUrl?: string | null;
   name: string;
+  email: string;
   isVerified?: boolean;
 }
 
-// --------------------------------------------------------------------
-// 4. Module augmentation for NextAuth types
-// --------------------------------------------------------------------
 declare module "next-auth" {
   interface Session {
     accessToken: string;
@@ -80,37 +73,74 @@ declare module "next-auth" {
   }
   interface JWT {
     accessToken: {
-      claims: SafeDecodedToken;
+      claims: TokenClaims;
       value: string;
     };
     refreshToken: {
-      claims: SafeDecodedToken;
+      claims: TokenClaims;
       value: string;
     };
     roles: string[];
     userId: string;
     imageUrl?: string | null;
     name: string;
+    email: string;
     isVerified?: boolean;
   }
 }
 
-// --------------------------------------------------------------------
-// 5. Initialize NextAuth (✅ Fixes `UntrustedHost` by adding `trustHost: true`)
-// --------------------------------------------------------------------
 export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/login",
     error: "/login",
   },
   secret: process.env.NEXTAUTH_SECRET,
-  trustHost: true, // ✅ Trusts ALL hosts (fixes UntrustedHost error)
+  trustHost: true,
   debug: process.env.NODE_ENV === "development",
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: { scope: "openid email profile" },
+      },
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name || "Google User",
+          email: profile.email || "",
+          imageUrl: profile.picture || null,
+          roles: [], // ✅ Must provide a default empty roles array
+          token: {
+            accessToken: { 
+              claims: { 
+                userId: profile.sub, // ✅ Ensure `userId` is included
+                sub: profile.sub,
+                name: profile.name || "Google User",
+                imageUrl: profile.picture || null,
+                scope: "", // ✅ Provide empty scope initially
+                isVerified: false // ✅ Default to false
+              }, 
+              value: "" 
+            },
+            refreshToken: { 
+              claims: { 
+                userId: profile.sub, 
+                sub: profile.sub,
+                name: profile.name || "Google User",
+                imageUrl: profile.picture || null,
+                scope: "", 
+                isVerified: false 
+              }, 
+              value: "" 
+            },
+          },
+          isVerified: false, // ✅ Default value
+        };
+      },
     }),
+    
+    
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -128,40 +158,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(credentials),
           });
+
           if (!response.ok) {
             throw new Error("Invalid credentials");
           }
+
           const { data } = await response.json();
-          if (!data?.accessToken || !process.env.JWT_SECRET) {
-            throw new Error("JWT secret or accessToken missing");
+          if (!data?.accessToken) {
+            throw new Error("Missing access token");
           }
-          jwt.verify(data.accessToken, process.env.JWT_SECRET!);
+
           const decodedToken = jwtDecode<DecodedToken>(data.accessToken);
           return {
             userId: decodedToken.userId || "",
             email: decodedToken.sub || "",
             name: decodedToken.name || "Unknown User",
-            imageUrl:
-              typeof decodedToken.imageUrl === "string"
-                ? decodedToken.imageUrl
-                : null,
-            roles: decodedToken.scope.split(" ") || [],
+            imageUrl: decodedToken.imageUrl || null,
+            roles: data.user?.roles || [],
             isVerified: decodedToken.isVerified ?? false,
             token: {
               accessToken: {
-                claims: {
-                  ...decodedToken,
-                  userId: decodedToken.userId ?? "",
-                  scope: decodedToken.scope ?? "",
-                },
+                claims: decodedToken,
                 value: data.accessToken,
               },
               refreshToken: {
-                claims: {
-                  ...jwtDecode<DecodedToken>(data.refreshToken),
-                  userId: jwtDecode<DecodedToken>(data.refreshToken).userId ?? "",
-                  scope: jwtDecode<DecodedToken>(data.refreshToken).scope ?? "",
-                },
+                claims: jwtDecode<DecodedToken>(data.refreshToken),
                 value: data.refreshToken,
               },
             },
@@ -174,62 +195,57 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async session({ session, token }) {
-      const customToken = token as CustomToken;
-      session.accessToken = customToken.accessToken.value;
-      session.refreshToken = customToken.refreshToken.value;
-      session.user = {
-        ...session.user,
-        id: customToken.userId || "",
-        email: customToken.accessToken.claims.sub || "",
-        name: customToken.name || "Unknown User",
-        imageUrl: customToken.imageUrl || null,
-        roles: customToken.roles || [],
-        isVerified: customToken.isVerified ?? false,
-      };
-      return session;
-    },
-    async jwt({ token, user }) {
-      if (user) {
-        const customUser = user as CustomUser;
-        token = {
-          ...token,
-          accessToken: customUser.token.accessToken,
-          refreshToken: customUser.token.refreshToken,
-          roles: customUser.roles || [],
-          userId: customUser.userId || "",
-          imageUrl: customUser.imageUrl || null,
-          name: customUser.name,
-          isVerified: customUser.isVerified,
-        } as CustomToken;
+    async jwt({ token, user, account }) {
+      if (account?.provider === "google") {
+        try {
+          const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/google-login`;
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: account.id_token }),
+          });
+
+          if (!response.ok) throw new Error("Failed to authenticate with backend");
+
+          const jsonResponse = await response.json();
+          console.log("🔍 Backend Google Login Response:", jsonResponse);
+
+          const { data } = jsonResponse;
+          const decodedToken = jwtDecode<TokenClaims>(data.accessToken);
+
+          token.accessToken = {
+            claims: decodedToken,
+            value: data.accessToken,
+          };
+          token.refreshToken = {
+            claims: jwtDecode<TokenClaims>(data.refreshToken),
+            value: data.refreshToken,
+          };
+          token.userId = data.user?.id || decodedToken.userId || "";
+          token.roles = data.user?.roles || ["USER"];
+          token.isVerified = data.user?.isVerified;
+          token.name = data.user?.name || decodedToken.name || "Google User";
+          token.email = data.user?.email || decodedToken.sub || "";
+          token.imageUrl = data.user?.imageUrl || decodedToken.imageUrl || null;
+
+        } catch (error) {
+          console.error("Google Login Backend Error:", error);
+        }
       }
       return token;
     },
+    async session({ session, token }) {
+      session.accessToken = token.accessToken.value;
+      session.refreshToken = token.refreshToken.value;
+      session.user = {
+        ...session.user,
+        id: token.userId || "",
+        name: token.name || "Google User",
+        email: token.email || "",
+        imageUrl: token.imageUrl || null,
+        roles: token.roles || [],
+      };
+      return session;
+    },
   },
 });
-
-// --------------------------------------------------------------------
-// 6. Refresh token function
-// --------------------------------------------------------------------
-const refreshToken = async (refreshToken: string) => {
-  const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/refresh`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${refreshToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ token: refreshToken }),
-  });
-  if (!response.ok) return null;
-  const { data } = await response.json();
-  jwt.verify(data.accessToken, process.env.JWT_SECRET!);
-  return {
-    claims: {
-      ...jwtDecode<SafeDecodedToken>(data.accessToken),
-      userId: jwtDecode<SafeDecodedToken>(data.accessToken).userId ?? "",
-      scope: jwtDecode<SafeDecodedToken>(data.accessToken).scope ?? "",
-    },
-    value: data.accessToken,
-  };
-};
