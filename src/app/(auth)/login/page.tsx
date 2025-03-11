@@ -83,7 +83,7 @@ const LoginPage: FC = () => {
           className="bg-[#8A2DE2] text-white p-2 rounded w-full flex justify-center items-center"
           disabled={isLoading}
         >
-          <FontAwesomeIcon icon={faGoogle} className="mr-2" />
+          <FontAwesomeIcon icon={faGoogle} className="mr-2 w-5" />
           {isLoading ? "Loading..." : "Sign in with Google"}
         </button>
 

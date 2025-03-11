@@ -35,7 +35,7 @@ const ProfilePage = () => {
         console.log(`📡 Fetching user from API: /users/${userId}`);
         const BASE_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080/api/v1";
 
-        const res = await fetch(`${BASE_API_URL}/api/v1/users/${userId}`, {
+        const res = await fetch(`${BASE_API_URL}/users/${userId}`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -68,7 +68,12 @@ const ProfilePage = () => {
       {/* Left Section - User Information */}
       <div className="md:w-2/3">
         <h1 className="text-3xl font-bold mb-6">Personal Info</h1>
-        <ProfileDetailsSection user={user} setUser={setUser} />
+        <ProfileDetailsSection 
+          user={user} 
+          setUser={(updatedFields) => 
+            setUser((prevUser) => prevUser ? { ...prevUser, ...updatedFields } : prevUser)
+          } 
+        />
       </div>
 
       {/* Right Section - Help Panel */}
