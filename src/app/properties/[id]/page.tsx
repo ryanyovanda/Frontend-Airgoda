@@ -7,21 +7,32 @@ import PropertyDetails from "../../components/details/PropertyDetails";
 import Navbar from "@/app/components/navbar";
 
 const PropertyPage = () => {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string | undefined; // ✅ Ensure `id` is treated as a string
   const [property, setProperty] = useState(null);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProperty = async () => {
       console.log("Fetching property ID:", id);
+
       if (!id) {
         setError("Invalid property ID.");
         return;
       }
 
+      // ✅ Convert id to a number safely
+      const numericId = parseInt(id, 10);
+
+      if (isNaN(numericId)) {
+        setError("Invalid property ID.");
+        return;
+      }
+
       try {
-        const data = await getPropertyById(id);
+        const data = await getPropertyById(numericId);
         console.log("Fetched property data:", data);
+
         if (!data) {
           throw new Error("Property not found.");
         }
@@ -45,10 +56,10 @@ const PropertyPage = () => {
 
   return (
     <>
-    <Navbar />
-    <div className="container mx-auto p-6">
-      <PropertyDetails data={property} />
-    </div>
+      <Navbar />
+      <div className="container mx-auto p-6">
+        <PropertyDetails data={property} />
+      </div>
     </>
   );
 };

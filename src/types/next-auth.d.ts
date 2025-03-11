@@ -1,8 +1,7 @@
 import "next-auth";
 import { DefaultSession } from "next-auth";
 import { TokenClaims } from "./auth/TokenPair";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { JWT } from "next-auth/jwt"
+import { JWT } from "next-auth/jwt"; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 declare module "next-auth" {
   interface Session {
@@ -10,11 +9,12 @@ declare module "next-auth" {
     refreshToken: string;
     error?: string;
     user: {
-      id: string;
+      id: string; // ✅ Ensure `id` is always a string
       email: string;
       roles: string[];
       name: string;
       isVerified: boolean;
+      imageUrl?: string | null; // ✅ Added `imageUrl`
     } & DefaultSession["user"];
   }
 
@@ -22,19 +22,20 @@ declare module "next-auth" {
     accessToken: {
       claims: TokenClaims;
       value: string;
-    }
+    };
     refreshToken: {
       claims: TokenClaims;
       value: string;
-    }
+    };
   }
 
   interface User {
+    id: string; // ✅ Ensuring userId is consistent as `string`
     roles: string[];
     token: UserTokenDetails;
-    userId: number;
     name: string;
     isVerified: boolean;
+    imageUrl?: string | null; // ✅ Added `imageUrl`
   }
 }
 
@@ -44,11 +45,13 @@ declare module "next-auth/jwt" {
     accessToken: {
       claims: TokenClaims;
       value: string;
-    }
+    };
     refreshToken: {
       claims: TokenClaims;
       value: string;
-    }
+    };
+    imageUrl?: string | null; // ✅ Added `imageUrl` to JWT
+    userId: string; // ✅ Ensured `userId` is a string for consistency
     error?: string;
   }
 }

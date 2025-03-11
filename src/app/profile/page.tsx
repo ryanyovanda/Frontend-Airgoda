@@ -7,11 +7,12 @@ import ProfileDetailsSection from "@/app/components/profile/ProfileDetailsSectio
 
 const ProfilePage = () => {
   const [user, setUser] = useState<{ 
-    id?: string; 
+    id: string; // ✅ Ensures `id` is always a string
     name?: string; 
     email?: string;
     isVerified?: boolean;
   } | null>(null);
+  
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -48,7 +49,7 @@ const ProfilePage = () => {
         }
 
         const { data } = await res.json();
-        setUser(data);
+        setUser({ id: data.id ?? "", name: data.name, email: data.email, isVerified: data.isVerified }); // ✅ Ensures `id` is never `undefined`
       } catch (error) {
         console.error("🚨 Fetch User Error:", error);
       } finally {

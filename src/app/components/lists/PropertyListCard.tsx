@@ -4,7 +4,26 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-const fetchRoomVariants = async (propertyId: number) => {
+// ✅ Define Interfaces for Strong Typing
+interface RoomVariant {
+  id: number;
+  name: string;
+  price: number;
+}
+
+interface Property {
+  id: number;
+  name: string;
+  location?: { name?: string };
+  imageUrls?: string[];
+}
+
+interface PropertyListCardProps {
+  data: Property;
+}
+
+// ✅ Fetch Room Variants for Property
+const fetchRoomVariants = async (propertyId: number): Promise<RoomVariant[]> => {
   try {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/room-variants/property/${propertyId}`
@@ -17,8 +36,8 @@ const fetchRoomVariants = async (propertyId: number) => {
   }
 };
 
-const PropertyListCard = ({ data }) => {
-  const [roomVariants, setRoomVariants] = useState([]);
+const PropertyListCard: React.FC<PropertyListCardProps> = ({ data }) => {
+  const [roomVariants, setRoomVariants] = useState<RoomVariant[]>([]);
 
   useEffect(() => {
     fetchRoomVariants(data.id).then(setRoomVariants);
@@ -33,14 +52,14 @@ const PropertyListCard = ({ data }) => {
 
   return (
     <div className="border p-4 rounded-lg shadow-sm">
-      {/* ✅ Fixed Image Handling */}
+      {/* ✅ Image Handling */}
       <div className="flex justify-center">
         {data.imageUrls && data.imageUrls.length > 0 ? (
           <div className="relative w-[300px] h-[200px]">
             <Image
               src={data.imageUrls[0]} // Show only the first image
               alt={data.name}
-              fill={true} // Replace `layout="fill"`
+              fill // ✅ Correct usage in Next.js
               sizes="(max-width: 768px) 100vw, 300px"
               className="rounded-lg object-cover"
             />
@@ -54,12 +73,12 @@ const PropertyListCard = ({ data }) => {
 
       <h3 className="text-lg font-semibold mt-2">{data.name}</h3>
 
-      {/* Display Location */}
+      {/* ✅ Display Location */}
       <p className="text-sm text-gray-600">
         <strong>Location:</strong> {locationText}
       </p>
 
-      {/* Display Room Variants */}
+      {/* ✅ Display Room Variants */}
       <p className="text-md text-gray-600">
         <strong>Room Types:</strong>{" "}
         {roomVariants.length > 0
@@ -67,11 +86,12 @@ const PropertyListCard = ({ data }) => {
           : "No rooms available"}
       </p>
 
-      {/* Display Lowest Room Price */}
+      {/* ✅ Display Lowest Room Price */}
       <p className="text-lg font-bold mt-2 text-blue-600">
         {basePrice !== "N/A" ? `Rp. ${basePrice} / night` : "Price unavailable"}
       </p>
 
+      {/* ✅ View Details Button */}
       <Link href={`/properties/${data.id}`}>
         <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mt-3">
           View Details

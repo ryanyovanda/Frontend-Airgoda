@@ -5,14 +5,22 @@ import getAllProperties from "@/app/actions/getAllProperties.actions";
 import getPropertyCategories from "@/app/actions/getPropertyCategories.actions";
 import PropertyListCard from "./PropertyListCard";
 
-// ✅ Define Category Type
+// ✅ Define Types
 interface Category {
   id: number;
   name: string;
 }
 
+interface Property {
+  id: number;
+  name: string;
+  location?: { name?: string };
+  imageUrls?: string[];
+  description: string;
+}
+
 const PropertyList = () => {
-  const [properties, setProperties] = useState([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [page, setPage] = useState(0);
@@ -31,7 +39,9 @@ const PropertyList = () => {
   useEffect(() => {
     const fetchProperties = async () => {
       console.log("Fetching properties with category:", selectedCategory);
-      const { content, totalPages } = await getAllProperties(page, size, selectedCategory ?? null); // ✅ Convert undefined to null
+      const categoryParam: null | undefined = selectedCategory === null ? null : undefined;
+      const { content, totalPages } = await getAllProperties(page, size, categoryParam);
+
       setProperties(content);
       setTotalPages(totalPages);
     };
