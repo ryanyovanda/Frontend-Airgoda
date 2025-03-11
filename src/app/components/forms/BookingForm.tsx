@@ -15,7 +15,7 @@ interface SessionData {
 }
 
 interface BookingFormProps {
-  propertyId: number; // ✅ Ensure propertyId is a number and used
+  propertyId: number;
   roomVariants?: RoomVariant[];
 }
 
@@ -62,15 +62,24 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
     }
 
     const payload = {
-      userId: session.user.id,
-      propertyId, // ✅ Now used in the request
-      roomVariantId: selectedRoomVariant,
-      checkIn,
-      checkOut,
-      guests,
-      isPaid: false,
+      user: {
+        id: session.user.id,
+      },
       totalPrice: 0,
+      isPaid: false,
+      orderItems: [
+        {
+          roomVariant: {
+            id: selectedRoomVariant,
+          },
+          startDate: checkIn,
+          endDate: checkOut,
+          guest: guests,
+        },
+      ],
     };
+
+    console.log("Payload being sent:", JSON.stringify(payload, null, 2));
 
     try {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
