@@ -8,8 +8,6 @@ import jwt from "jsonwebtoken";
 // --------------------------------------------------------------------
 // 1. Define token structures
 // --------------------------------------------------------------------
-
-// Structure of the decoded JWT token from your backend
 interface DecodedToken {
   userId: string;
   sub: string;
@@ -20,7 +18,6 @@ interface DecodedToken {
   exp?: number;
 }
 
-// Ensure that in our JWT claims the required fields are always present
 type SafeDecodedToken = Omit<DecodedToken, "userId" | "scope"> & {
   userId: string;
   scope: string;
@@ -99,18 +96,15 @@ declare module "next-auth" {
 }
 
 // --------------------------------------------------------------------
-// 5. Initialize NextAuth
+// 5. Initialize NextAuth (✅ Fixes `UntrustedHost` by adding `trustHost: true`)
 // --------------------------------------------------------------------
 export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/login",
     error: "/login",
   },
-  session: {
-    strategy: "jwt",
-    maxAge: 60 * 60 * 1, // 1-hour expiry
-  },
   secret: process.env.NEXTAUTH_SECRET,
+  trustHost: true, // ✅ Trusts ALL hosts (fixes UntrustedHost error)
   debug: process.env.NODE_ENV === "development",
   providers: [
     GoogleProvider({
@@ -141,7 +135,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (!data?.accessToken || !process.env.JWT_SECRET) {
             throw new Error("JWT secret or accessToken missing");
           }
-          // Use non-null assertion for JWT_SECRET
           jwt.verify(data.accessToken, process.env.JWT_SECRET!);
           const decodedToken = jwtDecode<DecodedToken>(data.accessToken);
           return {
@@ -182,7 +175,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async session({ session, token }) {
-      // Cast token to CustomToken so we can use our custom properties
       const customToken = token as CustomToken;
       session.accessToken = customToken.accessToken.value;
       session.refreshToken = customToken.refreshToken.value;
@@ -198,9 +190,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
     async jwt({ token, user }) {
-      // Let NextAuth infer the parameter types.
       if (user) {
-        // Cast user to CustomUser since our authorize() returns our custom type.
         const customUser = user as CustomUser;
         token = {
           ...token,
@@ -233,7 +223,6 @@ const refreshToken = async (refreshToken: string) => {
   });
   if (!response.ok) return null;
   const { data } = await response.json();
-  // Use non-null assertion for JWT_SECRET
   jwt.verify(data.accessToken, process.env.JWT_SECRET!);
   return {
     claims: {
