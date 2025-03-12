@@ -16,9 +16,9 @@ interface Slide {
 }
 
 const slides: Slide[] = [
-  { id: 1, image: "/image.png", title: "Slide One", subtitle: "Subtitle One" },
-  { id: 2, image: "/image.png", title: "Slide Two", subtitle: "Subtitle Two" },
-  { id: 3, image: "/image.png", title: "Slide Three", subtitle: "Subtitle Three" },
+  { id: 1, image: "/image.png"},
+  { id: 2, image: "/image.png"},
+  { id: 3, image: "/image.png"},
 ];
 
 const HeroSlideshow = () => {

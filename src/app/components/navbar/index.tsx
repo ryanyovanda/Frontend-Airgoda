@@ -20,15 +20,17 @@ const Navbar = () => {
         </Link>
       </div>
 
-      {/* Middle Section: Navigation Links */}
-      <div className="hidden md:flex items-center space-x-4">
-        <Link href="/register" className="text-gray-600 hover:text-black">
-          Register
-        </Link>
-        <Link href="/register-tenant" className="text-gray-600 hover:text-black">
-          List Your Place
-        </Link>
-      </div>
+      {/* Middle Section: Navigation Links - HIDDEN when logged in */}
+      {!session && (
+        <div className="hidden md:flex items-center space-x-4">
+          <Link href="/register" className="text-gray-600 hover:text-black">
+            Register
+          </Link>
+          <Link href="/register-tenant" className="text-gray-600 hover:text-black">
+            List Your Place
+          </Link>
+        </div>
+      )}
 
       {/* Right Section: Profile & Actions */}
       <div className="flex items-center space-x-4">
@@ -48,28 +50,28 @@ const Navbar = () => {
             {/* Dropdown Menu */}
             {isProfileOpen && (
               <div className="relative">
-              <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-md p-2 z-50">
-                <Link
-                  href="/profile"
-                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
-                >
-                  Profile
-                </Link>
-                {session?.user?.roles?.includes("TENANT") && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-md p-2 z-50">
                   <Link
-                    href="/dashboard"
+                    href="/profile"
                     className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
                   >
-                    Dashboard
+                    Profile
                   </Link>
-                )}
-                <button
-                  onClick={() => signOut()}
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
-                >
-                  Logout
-                </button>
-              </div>
+                  {session?.user?.roles?.includes("TENANT") && (
+                    <Link
+                      href="/dashboard"
+                      className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
+                    >
+                      Dashboard
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => signOut()}
+                    className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
+                  >
+                    Logout
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -1,22 +1,11 @@
 import NextAuth, { DefaultSession, User as NextAuthUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { JWT } from "next-auth/jwt";
 import { jwtDecode } from "jwt-decode";
-import jwt from "jsonwebtoken";
-
-interface DecodedToken {
-  userId: string;
-  sub: string;
-  name?: string;
-  imageUrl?: string | null;
-  scope: string;
-  isVerified?: boolean;
-  exp?: number;
-}
+import jwt from "jsonwebtoken"; 
 
 interface TokenClaims {
-  userId: string;
+  userId: number; // ✅ Fix: Use number since backend returns numeric userId
   sub: string;
   name?: string;
   imageUrl?: string | null;
@@ -25,7 +14,7 @@ interface TokenClaims {
 }
 
 interface CustomUser extends NextAuthUser {
-  userId: string;
+  userId: number;
   imageUrl?: string | null;
   roles: string[];
   isVerified: boolean;
@@ -41,29 +30,12 @@ interface CustomUser extends NextAuthUser {
   };
 }
 
-interface CustomToken extends JWT {
-  accessToken: {
-    claims: TokenClaims;
-    value: string;
-  };
-  refreshToken: {
-    claims: TokenClaims;
-    value: string;
-  };
-  roles: string[];
-  userId: string;
-  imageUrl?: string | null;
-  name: string;
-  email: string;
-  isVerified?: boolean;
-}
-
 declare module "next-auth" {
   interface Session {
     accessToken: string;
     refreshToken: string;
     user: {
-      id: string;
+      id: number;
       email: string;
       name: string;
       imageUrl?: string | null;
@@ -81,7 +53,7 @@ declare module "next-auth" {
       value: string;
     };
     roles: string[];
-    userId: string;
+    userId: number;
     imageUrl?: string | null;
     name: string;
     email: string;
@@ -104,43 +76,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       authorization: {
         params: { scope: "openid email profile" },
       },
-      profile(profile) {
+      async profile(profile) {
         return {
           id: profile.sub,
           name: profile.name || "Google User",
           email: profile.email || "",
           imageUrl: profile.picture || null,
-          roles: [], // ✅ Must provide a default empty roles array
+          roles: [],
+          isVerified: false,
           token: {
-            accessToken: { 
-              claims: { 
-                userId: profile.sub, // ✅ Ensure `userId` is included
-                sub: profile.sub,
-                name: profile.name || "Google User",
-                imageUrl: profile.picture || null,
-                scope: "", // ✅ Provide empty scope initially
-                isVerified: false // ✅ Default to false
-              }, 
-              value: "" 
-            },
-            refreshToken: { 
-              claims: { 
-                userId: profile.sub, 
-                sub: profile.sub,
-                name: profile.name || "Google User",
-                imageUrl: profile.picture || null,
-                scope: "", 
-                isVerified: false 
-              }, 
-              value: "" 
-            },
+            accessToken: { claims: {}, value: "" },
+            refreshToken: { claims: {}, value: "" },
           },
-          isVerified: false, // ✅ Default value
         };
       },
     }),
-    
-    
+
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -158,31 +109,37 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(credentials),
           });
-
           if (!response.ok) {
             throw new Error("Invalid credentials");
           }
-
           const { data } = await response.json();
-          if (!data?.accessToken) {
-            throw new Error("Missing access token");
+          if (!data?.accessToken || !process.env.JWT_SECRET) {
+            throw new Error("JWT secret or accessToken missing");
           }
-
+          jwt.verify(data.accessToken, process.env.JWT_SECRET!);
           const decodedToken = jwtDecode<DecodedToken>(data.accessToken);
           return {
             userId: decodedToken.userId || "",
-            email: decodedToken.sub || "",
+            email: decodedToken.email || "",
             name: decodedToken.name || "Unknown User",
-            imageUrl: decodedToken.imageUrl || null,
-            roles: data.user?.roles || [],
+            imageUrl: decodedToken.picture || null,
+            roles: decodedToken.scope ? decodedToken.scope.split(" ") : [],
             isVerified: decodedToken.isVerified ?? false,
             token: {
               accessToken: {
-                claims: decodedToken,
+                claims: {
+                  ...decodedToken,
+                  userId: decodedToken.userId ?? "",
+                  scope: decodedToken.scope ?? "",
+                },
                 value: data.accessToken,
               },
               refreshToken: {
-                claims: jwtDecode<DecodedToken>(data.refreshToken),
+                claims: {
+                  ...jwtDecode<DecodedToken>(data.refreshToken),
+                  userId: jwtDecode<DecodedToken>(data.refreshToken).userId ?? "",
+                  scope: jwtDecode<DecodedToken>(data.refreshToken).scope ?? "",
+                },
                 value: data.refreshToken,
               },
             },
@@ -196,6 +153,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user, account }) {
+      if (user) {
+        token.accessToken = user.token?.accessToken || { claims: {}, value: "" };
+        token.refreshToken = user.token?.refreshToken || { claims: {}, value: "" };
+        token.userId = user.userId;
+        token.roles = user.roles || [];
+        token.isVerified = user.isVerified;
+        token.name = user.name;
+        token.email = user.email;
+        token.imageUrl = user.imageUrl || null;
+      }
+
       if (account?.provider === "google") {
         try {
           const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/google-login`;
@@ -207,10 +175,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           if (!response.ok) throw new Error("Failed to authenticate with backend");
 
-          const jsonResponse = await response.json();
-          console.log("🔍 Backend Google Login Response:", jsonResponse);
-
-          const { data } = jsonResponse;
+          const { data } = await response.json();
           const decodedToken = jwtDecode<TokenClaims>(data.accessToken);
 
           token.accessToken = {
@@ -221,29 +186,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             claims: jwtDecode<TokenClaims>(data.refreshToken),
             value: data.refreshToken,
           };
-          token.userId = data.user?.id || decodedToken.userId || "";
-          token.roles = data.user?.roles || ["USER"];
-          token.isVerified = data.user?.isVerified;
-          token.name = data.user?.name || decodedToken.name || "Google User";
+          token.userId = data.user?.id || decodedToken.userId || 0; // ✅ Fix userId
+          token.roles = decodedToken.scope ? decodedToken.scope.split(" ") : []; // ✅ Extract roles
+          token.isVerified = data.user?.isVerified ?? false;
+          token.name = data.user?.name || decodedToken.name || "Unknown";
           token.email = data.user?.email || decodedToken.sub || "";
           token.imageUrl = data.user?.imageUrl || decodedToken.imageUrl || null;
-
         } catch (error) {
           console.error("Google Login Backend Error:", error);
         }
       }
       return token;
     },
+
     async session({ session, token }) {
-      session.accessToken = token.accessToken.value;
-      session.refreshToken = token.refreshToken.value;
+      if (!token.accessToken || !token.refreshToken) {
+        console.error("❌ Missing accessToken or refreshToken in session callback", token);
+        return session;
+      }
+
+      session.accessToken = token.accessToken.value || "";
+      session.refreshToken = token.refreshToken.value || "";
       session.user = {
         ...session.user,
-        id: token.userId || "",
-        name: token.name || "Google User",
+        id: token.userId || 0, // ✅ Fix: Use correct userId
+        name: token.name || "Unknown",
         email: token.email || "",
         imageUrl: token.imageUrl || null,
         roles: token.roles || [],
+        isVerified: token.isVerified ?? false,
       };
       return session;
     },
