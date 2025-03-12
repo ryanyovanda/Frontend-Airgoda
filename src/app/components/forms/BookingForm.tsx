@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, differenceInDays } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { DateRange } from "react-day-picker";
 
 interface RoomVariant {
   id: number;
@@ -20,18 +25,28 @@ interface BookingFormProps {
 }
 
 const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = [] }) => {
-  const [checkIn, setCheckIn] = useState<string>("");
-  const [checkOut, setCheckOut] = useState<string>("");
-  const [guests, setGuests] = useState<number>(1);
-  const [selectedRoomVariant, setSelectedRoomVariant] = useState<number | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
   const router = useRouter();
+  const [selectedRoom, setSelectedRoom] = useState<number | null>(
+    roomVariants.length > 0 ? roomVariants[0].id : null
+  );
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [guests, setGuests] = useState<number>(1);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [totalPrice, setTotalPrice] = useState<number>(0);
 
   useEffect(() => {
-    if (roomVariants.length > 0) {
-      setSelectedRoomVariant(roomVariants[0].id);
+    if (dateRange?.from && dateRange?.to && selectedRoom) {
+      const selectedRoomVariant = roomVariants.find((room) => room.id === selectedRoom);
+      if (selectedRoomVariant) {
+        const nights = differenceInDays(dateRange.to, dateRange.from);
+        if (nights > 0) {
+          setTotalPrice(nights * selectedRoomVariant.price);
+        } else {
+          setTotalPrice(0);
+        }
+      }
     }
-  }, [roomVariants]);
+  }, [dateRange, selectedRoom]);
 
   const fetchSession = async (): Promise<SessionData | null> => {
     try {
@@ -48,6 +63,12 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
     e.preventDefault();
     setLoading(true);
 
+    if (!dateRange?.from || !dateRange?.to || !selectedRoom) {
+      alert("Please select a valid date range.");
+      setLoading(false);
+      return;
+    }
+
     const session = await fetchSession();
     if (!session?.accessToken || !session?.user?.id) {
       alert("Session expired. Please log in again.");
@@ -55,39 +76,24 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
       return;
     }
 
-    if (!selectedRoomVariant) {
-      alert("Please select a room variant.");
-      setLoading(false);
-      return;
-    }
-
     const payload = {
-      user: {
-        id: session.user.id,
-      },
-      totalPrice: 0,
+      user: { id: session.user.id },
+      totalPrice,
       isPaid: false,
       orderItems: [
         {
-          roomVariant: {
-            id: selectedRoomVariant,
-          },
-          startDate: checkIn,
-          endDate: checkOut,
+          roomVariant: { id: selectedRoom },
+          startDate: format(dateRange.from, "yyyy-MM-dd"),
+          endDate: format(dateRange.to, "yyyy-MM-dd"),
           guest: guests,
         },
       ],
     };
 
-    console.log("Payload being sent:", JSON.stringify(payload, null, 2));
+    console.log("Booking Payload:", JSON.stringify(payload, null, 2));
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-      if (!backendUrl) {
-        throw new Error("Backend URL is not set in environment variables.");
-      }
-
-      const response = await fetch(`${backendUrl}/orders`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/orders`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
@@ -113,45 +119,45 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
   };
 
   return (
-    <div className="border p-4 rounded shadow-md">
+    <div className="border p-6 rounded-lg shadow-md">
       <form onSubmit={handleBooking}>
-        <label className="block">Select Room Variant:</label>
+        {/* Select Room Variant */}
+        <label className="block">Room:</label>
         <select
-          value={selectedRoomVariant || ""}
-          onChange={(e) => setSelectedRoomVariant(Number(e.target.value))}
-          required
           className="w-full border p-2 rounded"
+          value={selectedRoom || ""}
+          onChange={(e) => setSelectedRoom(Number(e.target.value))}
+          required
         >
-          {roomVariants.length > 0 ? (
-            roomVariants.map((room) => (
-              <option key={room.id} value={room.id}>
-                {room.name} - Rp. {room.price} / night
-              </option>
-            ))
-          ) : (
-            <option value="">No available rooms</option>
-          )}
+          {roomVariants.map((room) => (
+            <option key={room.id} value={room.id}>
+              {room.name} - Rp. {room.price.toLocaleString()} / night
+            </option>
+          ))}
         </select>
 
-        <label className="block mt-2">Check-in Date:</label>
-        <input
-          type="date"
-          value={checkIn}
-          onChange={(e) => setCheckIn(e.target.value)}
-          required
-          className="w-full border p-2 rounded"
-        />
+        {/* Date Picker with Range Selection */}
+        <label className="block mt-4">Select Check-in & Check-out Dates:</label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full text-left">
+              {dateRange?.from && dateRange?.to
+                ? `${format(dateRange.from, "PPP")} → ${format(dateRange.to, "PPP")}`
+                : "Select a date range"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto">
+            <Calendar
+              mode="range"
+              selected={dateRange}
+              onSelect={setDateRange}
+              disabled={(date) => date < new Date()}
+            />
+          </PopoverContent>
+        </Popover>
 
-        <label className="block mt-2">Check-out Date:</label>
-        <input
-          type="date"
-          value={checkOut}
-          onChange={(e) => setCheckOut(e.target.value)}
-          required
-          className="w-full border p-2 rounded"
-        />
-
-        <label className="block mt-2">Guests:</label>
+        {/* Guests Selection */}
+        <label className="block mt-4">Guests:</label>
         <input
           type="number"
           value={guests}
@@ -161,12 +167,22 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
           className="w-full border p-2 rounded"
         />
 
+        {/* Show Total Price */}
+        {dateRange?.from && dateRange?.to && totalPrice > 0 ? (
+          <p className="text-lg font-bold text-gray-800 mt-4">
+            Total Price: <span className="text-blue-600">Rp. {totalPrice.toLocaleString()}</span>
+          </p>
+        ) : (
+          <p className="text-gray-500 mt-4">Select dates to see total price.</p>
+        )}
+
+        {/* Confirm Booking Button */}
         <button
           type="submit"
           disabled={loading}
-          className="bg-blue-500 text-white p-2 rounded w-full mt-4"
+          className="bg-pink-600 text-white p-3 rounded w-full mt-4 font-bold hover:bg-pink-700 transition"
         >
-          {loading ? "Booking..." : "Confirm Booking"}
+          {loading ? "Booking..." : "Reserve"}
         </button>
       </form>
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import getAllProperties from "@/app/actions/getAllProperties.actions";
 import getPropertyCategories from "@/app/actions/getPropertyCategories.actions";
 import PropertyListCard from "./PropertyListCard";
+import { Button } from "@/components/ui/button";
 
 // ✅ Define Types
 interface Category {
@@ -24,7 +25,7 @@ const PropertyList = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [page, setPage] = useState(0);
-  const [size] = useState(9);
+  const [size] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
@@ -51,54 +52,56 @@ const PropertyList = () => {
 
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-bold">Available Properties</h1>
-
       {/* ✅ Category Filters */}
-      <div className="flex gap-4 overflow-x-auto py-4">
-        <button
+      <div className="flex gap-2 overflow-x-auto py-4">
+        <Button
           onClick={() => { setSelectedCategory(null); setPage(0); }}
-          className={`px-4 py-2 rounded-lg border ${selectedCategory === null ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+          variant={selectedCategory === null ? "default" : "outline"}
         >
           All
-        </button>
+        </Button>
         {categories.map((category) => (
-          <button
+          <Button
             key={category.id}
             onClick={() => { setSelectedCategory(category.id); setPage(0); }}
-            className={`px-4 py-2 rounded-lg border ${selectedCategory === category.id ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+            variant={selectedCategory === category.id ? "default" : "outline"}
           >
             {category.name}
-          </button>
+          </Button>
         ))}
       </div>
 
-      {/* Property List */}
-      <div className="grid grid-cols-3 gap-4 mt-4">
+      {/* ✅ Property List */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mt-4">
         {properties.length > 0 ? (
           properties.map((property) => <PropertyListCard key={property.id} data={property} />)
         ) : (
-          <p>No properties available.</p>
+          <p className="text-gray-500 text-center col-span-5">No properties available.</p>
         )}
       </div>
 
       {/* ✅ Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex justify-center gap-4 mt-6">
-          <button
+        <div className="flex justify-center items-center gap-4 mt-6">
+          <Button
             onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
             disabled={page === 0}
-            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+            variant="outline"
+            className="px-4 py-2 rounded-lg disabled:opacity-50"
           >
             Previous
-          </button>
-          <span className="px-4 py-2">Page {page + 1} of {totalPages}</span>
-          <button
+          </Button>
+          <span className="text-lg font-medium text-gray-700">
+            Page {page + 1} of {totalPages}
+          </span>
+          <Button
             onClick={() => setPage((prev) => (prev + 1 < totalPages ? prev + 1 : prev))}
             disabled={page + 1 >= totalPages}
-            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+            variant="outline"
+            className="px-4 py-2 rounded-lg disabled:opacity-50"
           >
             Next
-          </button>
+          </Button>
         </div>
       )}
     </div>

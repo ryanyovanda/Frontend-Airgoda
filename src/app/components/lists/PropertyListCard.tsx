@@ -3,8 +3,14 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
+import { Card, CardContent } from "@/components/ui/card";
+import { Heart, Star } from "lucide-react";
 
-// ✅ Define Interfaces for Strong Typing
+// ✅ Define Interfaces
 interface RoomVariant {
   id: number;
   name: string;
@@ -51,53 +57,66 @@ const PropertyListCard: React.FC<PropertyListCardProps> = ({ data }) => {
   const locationText = data.location?.name || "Location unavailable";
 
   return (
-    <div className="border p-4 rounded-lg shadow-sm">
-      {/* ✅ Image Handling */}
-      <div className="flex justify-center">
-        {data.imageUrls && data.imageUrls.length > 0 ? (
-          <div className="relative w-[300px] h-[200px]">
-            <Image
-              src={data.imageUrls[0]} // Show only the first image
-              alt={data.name}
-              fill // ✅ Correct usage in Next.js
-              sizes="(max-width: 768px) 100vw, 300px"
-              className="rounded-lg object-cover"
-            />
-          </div>
-        ) : (
-          <div className="w-[300px] h-[200px] bg-gray-300 flex items-center justify-center rounded-lg">
-            <span className="text-gray-500">No Image</span>
-          </div>
-        )}
+    <Card className="rounded-xl shadow-md overflow-hidden transition hover:shadow-lg cursor-pointer">
+      <div className="relative">
+        {/* ✅ Swiper Image Carousel with Smaller White Arrows */}
+        <Swiper
+          navigation
+          modules={[Navigation]}
+          className="w-full h-[230px]"
+        >
+          {data.imageUrls && data.imageUrls.length > 0 ? (
+            data.imageUrls.map((url, index) => (
+              <SwiperSlide key={index}>
+                <Link href={`/properties/${data.id}`}>
+                  <Image
+                    src={url}
+                    alt={data.name}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 300px"
+                    className="object-cover rounded-t-xl"
+                  />
+                </Link>
+              </SwiperSlide>
+            ))
+          ) : (
+            <div className="w-full h-[230px] bg-gray-300 flex items-center justify-center">
+              <span className="text-gray-500">No Image</span>
+            </div>
+          )}
+        </Swiper>
+
+        {/* ✅ Custom Small White Navigation Arrows */}
+        <style jsx global>{`
+          .swiper-button-prev, .swiper-button-next {
+            color: white !important;
+            width: 15px !important;
+            height: 15px !important;
+          }
+        `}</style>
+
+        {/* Favorite Button */}
+        <button className="absolute top-3 right-3 bg-white p-2 rounded-full shadow-md">
+          <Heart className="w-5 h-5 text-red-500" />
+        </button>
       </div>
 
-      <h3 className="text-lg font-semibold mt-2">{data.name}</h3>
+      <CardContent className="p-3">
+        <h3 className="text-md font-semibold">{data.name}</h3>
+        <p className="text-sm text-gray-600">{locationText}</p>
 
-      {/* ✅ Display Location */}
-      <p className="text-sm text-gray-600">
-        <strong>Location:</strong> {locationText}
-      </p>
-
-      {/* ✅ Display Room Variants */}
-      <p className="text-md text-gray-600">
-        <strong>Room Types:</strong>{" "}
-        {roomVariants.length > 0
-          ? roomVariants.map((room) => room.name).join(", ")
-          : "No rooms available"}
-      </p>
-
-      {/* ✅ Display Lowest Room Price */}
-      <p className="text-lg font-bold mt-2 text-blue-600">
-        {basePrice !== "N/A" ? `Rp. ${basePrice} / night` : "Price unavailable"}
-      </p>
-
-      {/* ✅ View Details Button */}
-      <Link href={`/properties/${data.id}`}>
-        <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mt-3">
-          View Details
-        </button>
-      </Link>
-    </div>
+        {/* ✅ Display Price & Rating */}
+        <div className="flex justify-between items-center mt-2">
+          <p className="text-md font-bold text-gray-900">
+            {basePrice !== "N/A" ? `Rp. ${basePrice} / night` : "Price unavailable"}
+          </p>
+          <div className="flex items-center gap-1">
+            <Star className="w-4 h-4 text-yellow-400" />
+            <span className="text-sm font-semibold">4.8</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
