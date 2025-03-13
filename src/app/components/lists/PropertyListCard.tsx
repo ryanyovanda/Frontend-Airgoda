@@ -59,6 +59,10 @@ const PropertyListCard: React.FC<PropertyListCardProps> = ({ data }) => {
   return (
     <Card className="rounded-xl shadow-md overflow-hidden transition hover:shadow-lg cursor-pointer">
       <div className="relative">
+         {/* Favorite Button */}
+         <button className="absolute top-3 right-3 bg-white p-2 rounded-full shadow-md z-10">
+          <Heart className="w-5 h-5 text-red-500" />
+        </button>
         {/* ✅ Swiper Image Carousel with Smaller White Arrows */}
         <Swiper
           navigation
@@ -95,10 +99,7 @@ const PropertyListCard: React.FC<PropertyListCardProps> = ({ data }) => {
           }
         `}</style>
 
-        {/* Favorite Button */}
-        <button className="absolute top-3 right-3 bg-white p-2 rounded-full shadow-md">
-          <Heart className="w-5 h-5 text-red-500" />
-        </button>
+       
       </div>
 
       <CardContent className="p-3">
