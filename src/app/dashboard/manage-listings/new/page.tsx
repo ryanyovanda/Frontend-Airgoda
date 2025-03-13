@@ -4,7 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import axios from "axios";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 interface Location {
   id: number;
@@ -24,13 +29,13 @@ export default function AddProperty() {
     fullAddress: "",
   });
 
-  const [images, setImages] = useState<FileList | null>(null);
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<number | null>(null);
   const [selectedIsland, setSelectedIsland] = useState<number | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<number | null>(null);
   const [selectedCity, setSelectedCity] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchTenantId() {
@@ -38,32 +43,42 @@ export default function AddProperty() {
         const response = await axios.get("/api/auth/session");
         setProperty((prev) => ({ ...prev, tenantId: response.data.user.id }));
       } catch (error) {
-        console.error("Error fetching tenant ID:", error);
+        toast.error("Error fetching tenant ID.");
       }
     }
 
     async function fetchLocations() {
       try {
-        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-        const response = await axios.get(`${BACKEND_URL}/api/locations`);
-        console.log("✅ Locations fetched:", response.data);
+        const response = await axios.get(`${API_BASE_URL}/api/locations`);
         setLocations(response.data);
       } catch (error) {
-        console.error("❌ Error fetching locations:", error);
+        toast.error("Error fetching locations");
       }
     }
 
     fetchTenantId();
     fetchLocations();
-    setLoading(false);
   }, []);
 
-  // Filter functions
-  const getFilteredLocations = (type: string, parentId: number | null) => {
-    return locations.filter((loc) => loc.type === type && (loc.parent ? loc.parent.id === parentId : parentId === null));
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const selectedFiles = Array.from(e.target.files);
+    setImages((prevImages) => [...prevImages, ...selectedFiles]);
+    const newPreviews = selectedFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviews((prevPreviews) => [...prevPreviews, ...newPreviews]);
   };
 
-  // Handle selection changes
+  const handleRemoveImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const getFilteredLocations = (type: string, parentId: number | null) => {
+    return locations.filter(
+      (loc) => loc.type === type && (loc.parent ? loc.parent.id === parentId : parentId === null)
+    );
+  };
+
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const countryId = parseInt(e.target.value);
     setSelectedCountry(countryId);
@@ -96,151 +111,132 @@ export default function AddProperty() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
-    if (!property.tenantId) {
-      alert("Tenant ID not found. Please log in again.");
+
+    if (
+      !property.name ||
+      !property.description ||
+      !property.fullAddress ||
+      !property.locationId
+    ) {
+      toast.error("Please fill all required fields.");
       return;
     }
-  
-    try {
-      console.log("🔍 Preparing form data...");
-      const formData = new FormData();
-      const requestData = {
+
+    const formData = new FormData();
+    formData.append(
+      "data",
+      JSON.stringify({
         name: property.name,
         description: property.description,
-        tenantId: property.tenantId,
-        locationId: property.locationId,
+        categoryId: 1,
+        tenantId: Number(property.tenantId),
+        locationId: Number(property.locationId),
         fullAddress: property.fullAddress,
-      };
-  
-      formData.append("data", JSON.stringify(requestData));
-  
-      if (images) {
-        Array.from(images).forEach((file) => {
-          formData.append("images", file);
-        });
-      }
-  
-      console.log("🔍 Fetching access token...");
+        roomId: 1,
+      })
+    );
+
+    images.forEach((file) => formData.append("images", file));
+
+    try {
       const session = await axios.get("/api/auth/session");
       const accessToken = session.data.accessToken;
-  
-      if (!accessToken) {
-        alert("Authentication failed. Please log in again.");
-        return;
-      }
-  
-      console.log("✅ Access token retrieved:", accessToken);
-  
-      console.log("🔍 Sending POST request...");
-      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-  
-      const response = await axios.post(`${BACKEND_URL}/api/properties`, formData, {
+
+      await axios.post(`${API_BASE_URL}/api/properties`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${accessToken}`, 
+          Authorization: `Bearer ${accessToken}`,
         },
       });
-  
-      console.log("✅ Response received:", response.data);
-      alert("Property added successfully!");
+
+      toast.success("Property added successfully!");
       router.push("/dashboard/manage-listings");
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        console.error("❌ Error adding property:", error.response?.data || error.message);
-        
-        if (error.response?.status === 401) {
-          alert("Session expired. Please log in again.");
-        } else {
-          alert("Failed to add property. Check console for details.");
-        }
-      } else {
-        console.error("❌ Unexpected error:", error);
-        alert("An unexpected error occurred. Check console for details.");
-      }
+    } catch (error) {
+      toast.error("Failed to add property.");
     }
-    
   };
-  
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">Add New Property</h1>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
+      <Card className="max-w-2xl w-full shadow-xl rounded-2xl border-purple-400">
+        <CardHeader>
+          <CardTitle className="text-purple-600 text-2xl">✨ Add New Property</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Input
+              placeholder="Property Name"
+              value={property.name}
+              onChange={(e) => setProperty({ ...property, name: e.target.value })}
+              required
+            />
+            <Textarea
+              placeholder="Description"
+              value={property.description}
+              onChange={(e) => setProperty({ ...property, description: e.target.value })}
+              required
+            />
+            <Input
+              placeholder="Full Address"
+              value={property.fullAddress}
+              onChange={(e) => setProperty({ ...property, fullAddress: e.target.value })}
+              required
+            />
 
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input type="text" name="name" placeholder="Property Name" value={property.name} onChange={(e) => setProperty({ ...property, name: e.target.value })} required />
-          <textarea name="description" placeholder="Description" value={property.description} onChange={(e) => setProperty({ ...property, description: e.target.value })} className="w-full p-2 border rounded-md" required />
-          <Input type="text" name="fullAddress" placeholder="Full Address" value={property.fullAddress} onChange={(e) => setProperty({ ...property, fullAddress: e.target.value })} required />
-
-          {/* Country Dropdown */}
-          <label className="block">
-            <span className="text-gray-700">Select Country</span>
-            <select value={selectedCountry || ""} onChange={handleCountryChange} className="w-full p-2 border rounded-md">
-              <option value="">Select a Country</option>
+            {/* Location Dropdowns */}
+            <select value={selectedCountry || ""} onChange={handleCountryChange} className="w-full border rounded p-2">
+              <option value="">Select Country</option>
               {getFilteredLocations("COUNTRY", null).map((loc) => (
                 <option key={loc.id} value={loc.id}>{loc.name}</option>
               ))}
             </select>
-          </label>
 
-          {/* Island Dropdown */}
-          {selectedCountry && (
-            <label className="block">
-              <span className="text-gray-700">Select Island</span>
-              <select value={selectedIsland || ""} onChange={handleIslandChange} className="w-full p-2 border rounded-md">
-                <option value="">Select an Island</option>
-                {getFilteredLocations("ISLAND", selectedCountry).map((loc) => (
-                  <option key={loc.id} value={loc.id}>{loc.name}</option>
-                ))}
-              </select>
-            </label>
-          )}
+            <select value={selectedIsland || ""} onChange={handleIslandChange} className="w-full border rounded p-2">
+              <option value="">Select Island</option>
+              {getFilteredLocations("ISLAND", selectedCountry).map((loc) => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
+              ))}
+            </select>
 
-          {/* Province Dropdown */}
-          {selectedIsland && (
-            <label className="block">
-              <span className="text-gray-700">Select Province</span>
-              <select value={selectedProvince || ""} onChange={handleProvinceChange} className="w-full p-2 border rounded-md">
-                <option value="">Select a Province</option>
-                {getFilteredLocations("PROVINCE", selectedIsland).map((loc) => (
-                  <option key={loc.id} value={loc.id}>{loc.name}</option>
-                ))}
-              </select>
-            </label>
-          )}
+            <select value={selectedProvince || ""} onChange={handleProvinceChange} className="w-full border rounded p-2">
+              <option value="">Select Province</option>
+              {getFilteredLocations("PROVINCE", selectedIsland).map((loc) => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
+              ))}
+            </select>
 
-          {/* City Dropdown */}
-          {selectedProvince && (
-            <label className="block">
-              <span className="text-gray-700">Select City / Regency</span>
-              <select value={selectedCity || ""} onChange={handleCityChange} className="w-full p-2 border rounded-md">
-                <option value="">Select a City / Regency</option>
-                {getFilteredLocations("CITY", selectedProvince).concat(getFilteredLocations("REGENCY", selectedProvince)).map((loc) => (
-                  <option key={loc.id} value={loc.id}>{loc.name}</option>
-                ))}
-              </select>
-            </label>
-          )}
+            <select value={selectedCity || ""} onChange={handleCityChange} className="w-full border rounded p-2">
+              <option value="">Select City</option>
+              {getFilteredLocations("CITY", selectedProvince).map((loc) => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
+              ))}
+            </select>
+{/* Image Upload */}
+         {/* Image Previews */}
+         {imagePreviews.length > 0 && (
+  <div className="flex flex-wrap gap-2 mt-2">
+    {imagePreviews.map((preview, index) => (
+      <div key={index} className="relative w-20 h-20">
+        <img src={preview} alt="Preview" className="w-full h-full object-cover rounded-md" />
+        <button
+          type="button"
+          className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded"
+          onClick={() => handleRemoveImage(index)}
+        >
+          ✕
+        </button>
+      </div>
+    ))}
+  </div>
+)}
+            <Input type="file" multiple accept="image/*" onChange={handleImageChange} />
 
-          {/* Display Selected Location */}
-          {selectedCity && (
-            <p className="text-gray-600 mt-2">
-              Selected Location: <strong>{locations.find((loc) => loc.id === selectedCity)?.name}</strong>
-            </p>
-          )}
-
-          <label className="flex items-center">
-            <input type="checkbox" checked={property.isAvailable} onChange={(e) => setProperty({ ...property, isAvailable: e.target.checked })} />
-            <span className="ml-2">Available</span>
-          </label>
-          <Input type="file" multiple onChange={(e) => setImages(e.target.files)} />
-
-          <Button type="submit">Save Property</Button>
-        </form>
-      )}
+            <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700">
+              Save Property
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

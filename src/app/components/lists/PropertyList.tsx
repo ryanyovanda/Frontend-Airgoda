@@ -25,7 +25,7 @@ const PropertyList = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [page, setPage] = useState(0);
-  const [size] = useState(10);
+  const [size] = useState(30);
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {

@@ -3,8 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 import axios from "axios";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 interface Property {
   id: string;
@@ -23,56 +34,19 @@ export default function ManageListings() {
   useEffect(() => {
     async function fetchProperties() {
       try {
-        console.log("🔍 Fetching tenant ID...");
-        let sessionResponse = await axios.get("/api/auth/session");
-        let tenantId = sessionResponse.data.user.id;
-        let accessToken = sessionResponse.data.accessToken;
-        const refreshToken = sessionResponse.data.refreshToken;
-        console.log("✅ Tenant ID:", tenantId);
+        const sessionResponse = await axios.get("/api/auth/session");
+        const tenantId = sessionResponse.data.user.id;
+        const accessToken = sessionResponse.data.accessToken;
 
         const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
-        try {
-          console.log("🔍 Fetching properties...");
-          const response = await axios.get(`${BACKEND_URL}/api/properties/tenant?tenantId=${tenantId}`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
+        const response = await axios.get(`${BACKEND_URL}/api/properties/tenant?tenantId=${tenantId}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
 
-          console.log("✅ Properties received:", response.data);
-          setProperties(response.data);
-        } catch (error: unknown) {
-          if (axios.isAxiosError(error)) {
-            console.error("❌ Error fetching properties:", error.response?.data || error.message);
-
-            if (error.response?.status === 401) {
-              console.warn("⚠️ Access token expired. Attempting to refresh...");
-              try {
-                const refreshResponse = await axios.post(`${BACKEND_URL}/api/v1/auth/refresh`, { refreshToken });
-
-                accessToken = refreshResponse.data.accessToken;
-                sessionStorage.setItem("accessToken", accessToken);
-
-                console.log("🔄 Token refreshed. Retrying request...");
-                const retryResponse = await axios.get(`${BACKEND_URL}/api/properties/tenant?tenantId=${tenantId}`, {
-                  headers: { Authorization: `Bearer ${accessToken}` },
-                });
-
-                console.log("✅ Properties received after retry:", retryResponse.data);
-                setProperties(retryResponse.data);
-              } catch (refreshError) {
-                console.error("❌ Token refresh failed:", refreshError);
-              }
-            }
-          } else {
-            console.error("❌ Unexpected error:", error);
-          }
-        }
-      } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
-          console.error("❌ Error fetching properties:", error.response?.data || error.message);
-        } else {
-          console.error("❌ Unexpected error:", error);
-        }
+        setProperties(response.data);
+      } catch (error) {
+        toast.error("Failed to fetch properties.");
       } finally {
         setLoading(false);
       }
@@ -90,62 +64,63 @@ export default function ManageListings() {
       try {
         await axios.delete(`/api/properties/${id}`);
         setProperties((prev) => prev.filter((property) => property.id !== id));
-      } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
-          console.error("❌ Error deleting property:", error.response?.data || error.message);
-        } else {
-          console.error("❌ Unexpected error:", error);
-        }
+        toast.success("Property deleted successfully.");
+      } catch (error) {
+        toast.error("Error deleting property.");
       }
     }
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Manage Your Listings</h1>
-        <Button onClick={() => router.push("/dashboard/manage-listings/new")}>Add New Property</Button>
-      </div>
+    <div className="min-h-screen bg-gray-50 py-12 flex justify-center">
+      <Card className="w-full max-w-5xl shadow-xl">
+        <CardHeader className="flex flex-row justify-between items-center">
+          <CardTitle className="text-purple-600 text-2xl">🏘️ Manage Your Listings</CardTitle>
+          <Button onClick={() => router.push("/dashboard/manage-listings/new")}> 
+            <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add New Property
+          </Button>
+        </CardHeader>
 
-      {loading ? (
-        <p>Loading properties...</p>
-      ) : properties.length === 0 ? (
-        <p>No properties found. Click "Add New Property" to create one.</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Property Name</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Room Variants</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {properties.map((property) => (
-              <TableRow key={property.id}>
-                <TableCell>{property.name}</TableCell>
-                <TableCell>{property.location?.name || "Unknown Location"}</TableCell>
-                <TableCell>{property.isAvailable ? "Active" : "Inactive"}</TableCell>
-                <TableCell>{property.totalRoomVariants}</TableCell>
-                <TableCell>
-                  {property.categoryId ? `Category ID: ${property.categoryId}` : "No Category"}
-                </TableCell>
-                <TableCell className="flex gap-2">
-                  <Button variant="outline" onClick={() => handleEdit(property.id)}>
-                    Edit
-                  </Button>
-                  <Button variant="destructive" onClick={() => handleDelete(property.id)}>
-                    Delete
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+        <CardContent>
+          {loading ? (
+            <p className="text-center">Loading properties...</p>
+          ) : properties.length === 0 ? (
+            <p className="text-center">No properties found. Click "Add New Property" to create one.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Rooms</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {properties.map((property) => (
+                  <TableRow key={property.id}>
+                    <TableCell>{property.name}</TableCell>
+                    <TableCell>{property.location?.name || "Unknown"}</TableCell>
+                    <TableCell>{property.isAvailable ? "Active" : "Inactive"}</TableCell>
+                    <TableCell>{property.totalRoomVariants}</TableCell>
+                    <TableCell>{`Category ID: ${property.categoryId}`}</TableCell>
+                    <TableCell className="flex gap-2">
+                      <Button variant="outline" onClick={() => handleEdit(property.id)}>
+                        <FontAwesomeIcon icon={faEdit} className="mr-1" /> Edit
+                      </Button>
+                      <Button variant="destructive" onClick={() => handleDelete(property.id)}>
+                        <FontAwesomeIcon icon={faTrash} className="mr-1" /> Delete
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
