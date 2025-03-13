@@ -11,7 +11,7 @@ import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faTrash, faUpload } from "@fortawesome/free-solid-svg-icons";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface Location {
   id: number;
@@ -39,10 +39,13 @@ export default function ManageProperty() {
   useEffect(() => {
     async function fetchProperty() {
       try {
-        const response = await axios.get(`${API_BASE_URL}/properties/${propertyId}`);
+        const response = await axios.get(`${API_BASE_URL}/properties/${propertyId}`, {
+          withCredentials: true,
+        });
         setProperty(response.data);
       } catch (error) {
-        toast.error("Error fetching property details.");
+        console.error("Fetch Property Error:", error);
+        toast.error(error.response?.data?.message || "Error fetching property details.");
       } finally {
         setLoading(false);
       }
@@ -61,24 +64,31 @@ export default function ManageProperty() {
     Array.from(images).forEach((file) => formData.append("images", file));
 
     try {
-      await axios.put(`${API_BASE_URL}/properties/${propertyId}/images`, formData);
+      await axios.put(`${API_BASE_URL}/properties/${propertyId}/images`, formData, {
+        withCredentials: true,
+      });
       toast.success("Images uploaded successfully!");
       setImages(null);
       router.refresh();
     } catch (error) {
-      toast.error("Error uploading images.");
+      console.error("Image Upload Error:", error);
+      toast.error(error.response?.data?.message || "Error uploading images.");
     }
   };
 
-  const handleDeleteImage = async (imageId: string) => {
+  const handleDeleteImage = async (imageUrl: string) => {
     if (!confirm("Are you sure you want to delete this image?")) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/properties/image/${imageId}`);
+      await axios.delete(`${API_BASE_URL}/properties/image`, {
+        params: { imageUrl },
+        withCredentials: true,
+      });
       toast.success("Image deleted successfully!");
       router.refresh();
     } catch (error) {
-      toast.error("Error deleting image.");
+      console.error("Delete Image Error:", error);
+      toast.error(error.response?.data?.message || "Error deleting image.");
     }
   };
 
@@ -90,10 +100,11 @@ export default function ManageProperty() {
         ...property,
         categoryId: Number(property.categoryId),
         locationId: property.location.id,
-      });
+      }, { withCredentials: true });
       toast.success("Property updated successfully!");
     } catch (error) {
-      toast.error("Error updating property.");
+      console.error("Save Property Error:", error);
+      toast.error(error.response?.data?.message || "Error updating property.");
     }
   };
 
@@ -101,11 +112,14 @@ export default function ManageProperty() {
     if (!confirm("Are you sure you want to delete this property?")) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/properties/${propertyId}`);
+      await axios.delete(`${API_BASE_URL}/properties/${propertyId}`, {
+        withCredentials: true,
+      });
       toast.success("Property deleted successfully!");
       router.push("/dashboard/manage-listings");
     } catch (error) {
-      toast.error("Error deleting property.");
+      console.error("Delete Property Error:", error);
+      toast.error(error.response?.data?.message || "Error deleting property.");
     }
   };
 
@@ -148,10 +162,12 @@ export default function ManageProperty() {
               </div>
             ))}
           </div>
+
           <Input type="file" multiple onChange={(e) => setImages(e.target.files)} />
           <Button onClick={handleImageUpload} className="bg-green-500">
             <FontAwesomeIcon icon={faUpload} className="mr-2" /> Upload Images
           </Button>
+
           <div className="flex gap-2">
             <Button onClick={handleSave} className="bg-blue-500">
               <FontAwesomeIcon icon={faSave} className="mr-2" /> Save Changes
