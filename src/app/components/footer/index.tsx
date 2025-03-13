@@ -79,11 +79,11 @@ const Footer = () => {
         <div className="text-center text-xs text-gray-300 mt-6">
           <p>© {new Date().getFullYear()} YourCompany. All rights reserved.</p>
           <div className="flex justify-center space-x-4 mt-2">
-            <Link href="/terms" className="hover:underline">Website Terms</Link>
-            <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
-            <Link href="/accessibility" className="hover:underline">Accessibility</Link>
-            <Link href="/marketing" className="hover:underline">Marketing to Children</Link>
-            <Link href="/do-not-sell" className="hover:underline">Do Not Sell My Info</Link>
+            <Link href="" className="hover:underline">Website Terms</Link>
+            <Link href="" className="hover:underline">Privacy Policy</Link>
+            <Link href="" className="hover:underline">Accessibility</Link>
+            <Link href="" className="hover:underline">Marketing to Children</Link>
+            <Link href="" className="hover:underline">Do Not Sell My Info</Link>
           </div>
         </div>
       </div>

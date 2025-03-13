@@ -43,16 +43,16 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
   const locationText = data.location?.name || "Location unavailable";
 
   return (
-    <div className="max-w-7xl mx-auto p-6 flex gap-10">
+    <div className="max-w-7xl mx-auto p-6 flex gap-10 flex-col ">
       {/* LEFT SIDE: Images & Details */}
-      <div className="w-2/3">
+      <div className="lg:w-2/3 sm:w-full">
         {/* ✅ Full-Width Image Grid */}
         <div className="grid grid-cols-4 gap-2">
           {data.imageUrls && data.imageUrls.length > 0 ? (
             <>
               {/* Large Main Image */}
               <Dialog>
-                <DialogTrigger className="col-span-2 relative h-[400px]">
+                <DialogTrigger className="col-span-2 relative lg:h-[400px] sm:h-[100px] ">
                   <Image
                     src={data.imageUrls[0]}
                     alt="Main Property Image"
@@ -124,7 +124,7 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
       </div>
 
       {/* ✅ Floating Booking Form */}
-      <div className="w-1/3">
+      <div className="lg:w-1/3 sm:w-full">
         <div className="sticky top-20 border p-6 rounded-lg shadow-lg bg-white">
           <BookingForm propertyId={data.id} roomVariants={roomVariants} />
         </div>

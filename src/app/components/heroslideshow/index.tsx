@@ -30,7 +30,7 @@ const HeroSlideshow = () => {
         navigation
         pagination={{ clickable: true }}
         loop={true}
-        className="w-full h-[400px] z-0"
+        className="flex w-auto lg:h-[400px] z-0 "
       >
         {slides.map((slide) => (
           <SwiperSlide key={slide.id} className="relative">
