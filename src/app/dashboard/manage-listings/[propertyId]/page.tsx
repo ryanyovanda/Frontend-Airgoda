@@ -36,20 +36,26 @@ export default function ManageProperty() {
   const [images, setImages] = useState<FileList | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchProperty() {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/properties/${propertyId}`, {
-          withCredentials: true,
-        });
-        setProperty(response.data);
-      } catch (error) {
-        console.error("Fetch Property Error:", error);
+ useEffect(() => {
+  async function fetchProperty() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/properties/${propertyId}`, {
+        withCredentials: true,
+      });
+      setProperty(response.data);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("Fetch Property Error:", error.response?.data || error.message);
         toast.error(error.response?.data?.message || "Error fetching property details.");
-      } finally {
-        setLoading(false);
+      } else {
+        console.error("Unexpected error:", error);
+        toast.error("An unexpected error occurred.");
       }
+    } finally {
+      setLoading(false);
     }
+  }
+
 
     fetchProperty();
   }, [propertyId]);
@@ -59,10 +65,10 @@ export default function ManageProperty() {
       toast.error("Please select images to upload.");
       return;
     }
-
+  
     const formData = new FormData();
     Array.from(images).forEach((file) => formData.append("images", file));
-
+  
     try {
       await axios.put(`${API_BASE_URL}/properties/${propertyId}/images`, formData, {
         withCredentials: true,
@@ -71,14 +77,19 @@ export default function ManageProperty() {
       setImages(null);
       router.refresh();
     } catch (error) {
-      console.error("Image Upload Error:", error);
-      toast.error(error.response?.data?.message || "Error uploading images.");
+      if (axios.isAxiosError(error)) {
+        console.error("Image Upload Error:", error.response?.data || error.message);
+        toast.error(error.response?.data?.message || "Error uploading images.");
+      } else {
+        console.error("Unexpected error:", error);
+        toast.error("An unexpected error occurred.");
+      }
     }
-  };
+  };  
 
   const handleDeleteImage = async (imageUrl: string) => {
     if (!confirm("Are you sure you want to delete this image?")) return;
-
+  
     try {
       await axios.delete(`${API_BASE_URL}/properties/image`, {
         params: { imageUrl },
@@ -87,30 +98,46 @@ export default function ManageProperty() {
       toast.success("Image deleted successfully!");
       router.refresh();
     } catch (error) {
-      console.error("Delete Image Error:", error);
-      toast.error(error.response?.data?.message || "Error deleting image.");
+      if (axios.isAxiosError(error)) {
+        console.error("Delete Image Error:", error.response?.data || error.message);
+        toast.error(error.response?.data?.message || "Error deleting image.");
+      } else {
+        console.error("Unexpected error:", error);
+        toast.error("An unexpected error occurred.");
+      }
     }
   };
+  
 
   const handleSave = async () => {
     if (!property) return;
-
+  
     try {
-      await axios.put(`${API_BASE_URL}/properties/${propertyId}`, {
-        ...property,
-        categoryId: Number(property.categoryId),
-        locationId: property.location.id,
-      }, { withCredentials: true });
+      await axios.put(
+        `${API_BASE_URL}/properties/${propertyId}`,
+        {
+          ...property,
+          categoryId: Number(property.categoryId),
+          locationId: property.location.id,
+        },
+        { withCredentials: true }
+      );
       toast.success("Property updated successfully!");
     } catch (error) {
-      console.error("Save Property Error:", error);
-      toast.error(error.response?.data?.message || "Error updating property.");
+      if (axios.isAxiosError(error)) {
+        console.error("Save Property Error:", error.response?.data || error.message);
+        toast.error(error.response?.data?.message || "Error updating property.");
+      } else {
+        console.error("Unexpected error:", error);
+        toast.error("An unexpected error occurred.");
+      }
     }
   };
+  
 
   const handleDeleteProperty = async () => {
     if (!confirm("Are you sure you want to delete this property?")) return;
-
+  
     try {
       await axios.delete(`${API_BASE_URL}/properties/${propertyId}`, {
         withCredentials: true,
@@ -118,11 +145,16 @@ export default function ManageProperty() {
       toast.success("Property deleted successfully!");
       router.push("/dashboard/manage-listings");
     } catch (error) {
-      console.error("Delete Property Error:", error);
-      toast.error(error.response?.data?.message || "Error deleting property.");
+      if (axios.isAxiosError(error)) {
+        console.error("Delete Property Error:", error.response?.data || error.message);
+        toast.error(error.response?.data?.message || "Error deleting property.");
+      } else {
+        console.error("Unexpected error:", error);
+        toast.error("An unexpected error occurred.");
+      }
     }
   };
-
+  
   if (loading) return <p className="text-center py-12">Loading...</p>;
   if (!property) return <p className="text-center py-12">Property not found.</p>;
 
