@@ -12,7 +12,14 @@ import {
   History,
   Star,
   UserCircle2,
+  LucideIcon,
 } from "lucide-react";
+
+type NavLink = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+};
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -35,19 +42,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     fetchSession();
   }, []);
 
-  const links = [
+  const links: NavLink[] = [
     { name: "Profile", href: "/dashboard/profile", icon: UserCircle2 },
-    { name: "Manage Listings", href: "/dashboard/manage-listings", icon: ClipboardList,
-    },
-    role === "TENANT" && {
-      name: "Analytics & Reports",
-      href: "/dashboard/analytics",
-      icon: BarChart2,
-    },
+    { name: "Manage Listings", href: "/dashboard/manage-listings", icon: ClipboardList },
+    ...(role === "TENANT"
+      ? [{ name: "Analytics & Reports", href: "/dashboard/analytics", icon: BarChart2 }]
+      : []),
     { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
     { name: "Transaction History", href: "/dashboard/transactions", icon: History },
     { name: "Reviews", href: "/dashboard/reviews", icon: Star },
-  ].filter(Boolean);
+  ];
 
   if (loading) {
     return (
@@ -80,9 +84,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
       </aside>
 
-      <main className="flex-1 overflow-auto bg-gray-100 p-6">
-        {children}
-      </main>
+      <main className="flex-1 overflow-auto bg-gray-100 p-6">{children}</main>
     </div>
   );
 }
