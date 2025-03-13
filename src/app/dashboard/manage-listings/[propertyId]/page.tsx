@@ -39,7 +39,7 @@ export default function ManageProperty() {
  useEffect(() => {
   async function fetchProperty() {
     try {
-      const response = await axios.get(`${API_BASE_URL}/properties/${propertyId}`, {
+      const response = await axios.get(`${API_BASE_URL}/api/properties/${propertyId}`, {
         withCredentials: true,
       });
       setProperty(response.data);
@@ -70,7 +70,7 @@ export default function ManageProperty() {
     Array.from(images).forEach((file) => formData.append("images", file));
   
     try {
-      await axios.put(`${API_BASE_URL}/properties/${propertyId}/images`, formData, {
+      await axios.put(`${API_BASE_URL}/api/properties/${propertyId}/images`, formData, {
         withCredentials: true,
       });
       toast.success("Images uploaded successfully!");
@@ -91,7 +91,7 @@ export default function ManageProperty() {
     if (!confirm("Are you sure you want to delete this image?")) return;
   
     try {
-      await axios.delete(`${API_BASE_URL}/properties/image`, {
+      await axios.delete(`${API_BASE_URL}/api/properties/image`, {
         params: { imageUrl },
         withCredentials: true,
       });
@@ -114,7 +114,7 @@ export default function ManageProperty() {
   
     try {
       await axios.put(
-        `${API_BASE_URL}/properties/${propertyId}`,
+        `${API_BASE_URL}/api/properties/${propertyId}`,
         {
           ...property,
           categoryId: Number(property.categoryId),
@@ -139,7 +139,7 @@ export default function ManageProperty() {
     if (!confirm("Are you sure you want to delete this property?")) return;
   
     try {
-      await axios.delete(`${API_BASE_URL}/properties/${propertyId}`, {
+      await axios.delete(`${API_BASE_URL}/api/properties/${propertyId}`, {
         withCredentials: true,
       });
       toast.success("Property deleted successfully!");
