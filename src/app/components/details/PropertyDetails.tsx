@@ -43,7 +43,7 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
   const locationText = data.location?.name || "Location unavailable";
 
   return (
-    <div className="max-w-7xl mx-auto p-6 flex gap-10 flex-col ">
+    <div className="max-w-7xl mx-auto p-6 flex gap-10 sm:flex-col lg:flex-row ">
       {/* LEFT SIDE: Images & Details */}
       <div className="lg:w-2/3 sm:w-full">
         {/* ✅ Full-Width Image Grid */}
@@ -52,7 +52,7 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
             <>
               {/* Large Main Image */}
               <Dialog>
-                <DialogTrigger className="col-span-2 relative lg:h-[400px] sm:h-[100px] ">
+                <DialogTrigger className="col-span-2 relative h-[400px]">
                   <Image
                     src={data.imageUrls[0]}
                     alt="Main Property Image"
