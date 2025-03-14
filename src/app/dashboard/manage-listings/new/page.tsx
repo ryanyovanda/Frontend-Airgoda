@@ -18,17 +18,24 @@ interface Location {
   type: string;
 }
 
+interface Category {
+  id: number;
+  name: string;
+}
+
 export default function AddProperty() {
   const router = useRouter();
   const [property, setProperty] = useState({
     name: "",
     description: "",
-    isAvailable: true,
+    categoryId: "",
+    isActive: false,
     tenantId: "",
     locationId: "",
     fullAddress: "",
-  });
 
+  });
+  const [categories, setCategories] = useState<Category[]>([]);
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -56,8 +63,18 @@ export default function AddProperty() {
       }
     }
 
+    async function fetchCategories() {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/categories`);
+        setCategories(response.data);
+      } catch (error) {
+        toast.error("Error fetching categories.");
+      }
+    }
+
     fetchTenantId();
     fetchLocations();
+    fetchCategories();
   }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,7 +133,8 @@ export default function AddProperty() {
       !property.name ||
       !property.description ||
       !property.fullAddress ||
-      !property.locationId
+      !property.locationId ||
+      !property.categoryId
     ) {
       toast.error("Please fill all required fields.");
       return;
@@ -128,11 +146,12 @@ export default function AddProperty() {
       JSON.stringify({
         name: property.name,
         description: property.description,
-        categoryId: 1,
+        isActive: false,
+        categoryId: Number(property.categoryId),
         tenantId: Number(property.tenantId),
         locationId: Number(property.locationId),
         fullAddress: property.fullAddress,
-        roomId: 1,
+       
       })
     );
 
@@ -182,6 +201,20 @@ export default function AddProperty() {
               onChange={(e) => setProperty({ ...property, fullAddress: e.target.value })}
               required
             />
+            {/* ✅ Category Dropdown */}
+            <select
+              value={property.categoryId}
+              onChange={(e) => setProperty({ ...property, categoryId: e.target.value })}
+              className="w-full border rounded p-2"
+              required
+            >
+              <option value="">Select Category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
 
             {/* Location Dropdowns */}
             <select value={selectedCountry || ""} onChange={handleCountryChange} className="w-full border rounded p-2">

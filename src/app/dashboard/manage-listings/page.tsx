@@ -21,18 +21,24 @@ interface Property {
   id: string;
   name: string;
   location: { id: string; name: string } | null;
-  isAvailable: boolean;
+  isActive: boolean; 
   totalRoomVariants: number;
   categoryId: number;
 }
 
+interface Category {
+  id: number;
+  name: string;
+}
+
 export default function ManageListings() {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    async function fetchProperties() {
+    async function fetchData() {
       try {
         const sessionResponse = await axios.get("/api/auth/session");
         const tenantId = sessionResponse.data.user.id;
@@ -40,19 +46,24 @@ export default function ManageListings() {
 
         const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
-        const response = await axios.get(`${BACKEND_URL}/api/properties/tenant?tenantId=${tenantId}`, {
+        // Fetch categories
+        const categoryResponse = await axios.get(`${BACKEND_URL}/categories`);
+        setCategories(categoryResponse.data);
+
+        // Fetch properties
+        const propertyResponse = await axios.get(`${BACKEND_URL}/api/properties/tenant?tenantId=${tenantId}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
 
-        setProperties(response.data);
+        setProperties(propertyResponse.data);
       } catch (error) {
-        toast.error("Failed to fetch properties.");
+        toast.error("Failed to fetch data.");
       } finally {
         setLoading(false);
       }
     }
 
-    fetchProperties();
+    fetchData();
   }, []);
 
   const handleEdit = (id: string) => {
@@ -71,12 +82,18 @@ export default function ManageListings() {
     }
   };
 
+  // ✅ Function to get category name by ID
+  const getCategoryName = (categoryId: number) => {
+    const category = categories.find((cat) => cat.id === categoryId);
+    return category ? category.name : "Unknown";
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 flex justify-center">
       <Card className="w-full max-w-5xl shadow-xl">
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle className="text-purple-600 text-2xl">🏘️ Manage Your Listings</CardTitle>
-          <Button onClick={() => router.push("/dashboard/manage-listings/new")}> 
+          <Button onClick={() => router.push("/dashboard/manage-listings/new")}>
             <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add New Property
           </Button>
         </CardHeader>
@@ -103,9 +120,18 @@ export default function ManageListings() {
                   <TableRow key={property.id}>
                     <TableCell>{property.name}</TableCell>
                     <TableCell>{property.location?.name || "Unknown"}</TableCell>
-                    <TableCell>{property.isAvailable ? "Active" : "Inactive"}</TableCell>
+                    <TableCell>
+                    <span
+                      className={`px-2 py-1 rounded-md text-sm font-medium ${
+                        property.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {property.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </TableCell>
+
                     <TableCell>{property.totalRoomVariants}</TableCell>
-                    <TableCell>{`Category ID: ${property.categoryId}`}</TableCell>
+                    <TableCell>{getCategoryName(property.categoryId)}</TableCell> {/* ✅ Updated */}
                     <TableCell className="flex gap-2">
                       <Button variant="outline" onClick={() => handleEdit(property.id)}>
                         <FontAwesomeIcon icon={faEdit} className="mr-1" /> Edit

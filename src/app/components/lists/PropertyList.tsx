@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import getAllProperties from "@/app/actions/getAllProperties.actions";
-import getPropertyCategories from "@/app/actions/getPropertyCategories.actions";
+import axios from "axios";
 import PropertyListCard from "./PropertyListCard";
 import { Button } from "@/components/ui/button";
 
@@ -20,6 +19,8 @@ interface Property {
   description: string;
 }
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
 const PropertyList = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -30,30 +31,43 @@ const PropertyList = () => {
 
   useEffect(() => {
     const fetchCategories = async () => {
-      const categoryData: Category[] = await getPropertyCategories();
-      setCategories(categoryData);
+      try {
+        const response = await axios.get(`${BACKEND_URL}/categories`);
+        setCategories(response.data);
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      }
     };
 
     fetchCategories();
   }, []);
 
+  // ✅ Fetch properties when selectedCategory or page changes
   useEffect(() => {
     const fetchProperties = async () => {
-      console.log("Fetching properties with category:", selectedCategory);
-      const categoryParam: null | undefined = selectedCategory === null ? null : undefined;
-      const { content, totalPages } = await getAllProperties(page, size, categoryParam);
+      try {
+        let url = `${BACKEND_URL}/api/properties/filter?page=${page}&size=${size}`;
+        if (selectedCategory !== null) {
+          url += `&categoryId=${selectedCategory}`;
+        }
 
-      setProperties(content);
-      setTotalPages(totalPages);
+        console.log("Fetching properties from:", url); // Debugging
+
+        const response = await axios.get(url);
+        setProperties(response.data.content || []);
+        setTotalPages(response.data.totalPages);
+      } catch (error) {
+        console.error("Failed to fetch properties:", error);
+      }
     };
 
     fetchProperties();
-  }, [page, selectedCategory]);
+  }, [selectedCategory, page]); // ✅ Trigger API call when category or page changes
 
   return (
     <div className="container mx-auto p-6">
       {/* ✅ Category Filters */}
-      <div className="flex gap-2 overflow-x-auto py-4">
+      <div className="flex items-center gap-2 overflow-x-auto py-4">
         <Button
           onClick={() => { setSelectedCategory(null); setPage(0); }}
           variant={selectedCategory === null ? "default" : "outline"}

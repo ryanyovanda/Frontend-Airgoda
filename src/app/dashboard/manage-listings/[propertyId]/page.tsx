@@ -11,13 +11,18 @@ import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faTrash, faUpload } from "@fortawesome/free-solid-svg-icons";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 interface Location {
   id: number;
   name: string;
+  parent: Location | null;
   type: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
 }
 
 interface Property {
@@ -25,8 +30,9 @@ interface Property {
   name: string;
   description: string;
   categoryId: string;
-  location: Location;
+  locationId: string;
   fullAddress: string;
+  isActive: boolean;
   imageUrls: string[];
 }
 
@@ -34,81 +40,61 @@ export default function ManageProperty() {
   const { propertyId } = useParams();
   const router = useRouter();
   const [property, setProperty] = useState<Property | null>(null);
-  const [images, setImages] = useState<FileList | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchProperty() {
+    async function fetchData() {
       try {
-        const response = await axios.get(
-          `${API_BASE_URL}/api/properties/${propertyId}`,
-          { withCredentials: true }
-        );
-        setProperty(response.data);
+        // Fetch Property Details
+        const propertyRes = await axios.get(`${API_BASE_URL}/api/properties/${propertyId}`);
+        setProperty(propertyRes.data);
+        setSelectedLocation(propertyRes.data.locationId);
+        setImagePreviews(propertyRes.data.imageUrls || []);
+
+        // Fetch Categories
+        const categoriesRes = await axios.get(`${API_BASE_URL}/categories`);
+        setCategories(categoriesRes.data);
+
+        // Fetch Locations
+        const locationsRes = await axios.get(`${API_BASE_URL}/api/locations`);
+        setLocations(locationsRes.data);
       } catch (error) {
-        if (axios.isAxiosError(error)) {
-          toast.error(
-            error.response?.data?.message || "Error fetching property details."
-          );
-        } else {
-          toast.error("An unexpected error occurred.");
-        }
+        toast.error("Error fetching property details.");
       } finally {
         setLoading(false);
       }
     }
 
-    fetchProperty();
+    fetchData();
   }, [propertyId]);
 
-  const handleImageUpload = async () => {
-    if (!images) {
-      toast.error("Please select images to upload.");
-      return;
-    }
-
-    const formData = new FormData();
-    Array.from(images).forEach((file) => formData.append("images", file));
-
-    try {
-      await axios.put(
-        `${API_BASE_URL}/api/properties/${propertyId}/images`,
-        formData,
-        { withCredentials: true }
-      );
-      toast.success("Images uploaded successfully!");
-      setImages(null);
-      router.refresh();
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        toast.error(
-          error.response?.data?.message || "Error uploading images."
-        );
-      } else {
-        toast.error("An unexpected error occurred.");
-      }
-    }
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const selectedFiles = Array.from(e.target.files);
+    setImages((prev) => [...prev, ...selectedFiles]);
+    const newPreviews = selectedFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviews((prev) => [...prev, ...newPreviews]);
   };
 
-  const handleDeleteImage = async (imageUrl: string) => {
-    if (!confirm("Are you sure you want to delete this image?")) return;
-
-    try {
-      await axios.delete(`${API_BASE_URL}/api/properties/image`, {
-        params: { imageUrl },
-        withCredentials: true,
-      });
-      toast.success("Image deleted successfully!");
-      router.refresh();
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        toast.error(
-          error.response?.data?.message || "Error deleting image."
-        );
-      } else {
-        toast.error("An unexpected error occurred.");
+  const handleRemoveImage = async (index: number, imageUrl?: string) => {
+    if (imageUrl) {
+      try {
+        await axios.delete(`${API_BASE_URL}/api/properties/${propertyId}/images`, {
+          params: { imageUrl },
+        });
+        toast.success("Image deleted successfully!");
+      } catch (error) {
+        toast.error("Error deleting image.");
+        return;
       }
     }
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
@@ -118,21 +104,20 @@ export default function ManageProperty() {
       await axios.put(
         `${API_BASE_URL}/api/properties/${propertyId}`,
         {
-          ...property,
+          name: property.name,
+          description: property.description,
+          isActive: property.isActive,
           categoryId: Number(property.categoryId),
-          locationId: property.location.id,
+          locationId: Number(selectedLocation),
+          fullAddress: property.fullAddress,
         },
         { withCredentials: true }
       );
+
       toast.success("Property updated successfully!");
+      router.push("/dashboard/manage-listings");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        toast.error(
-          error.response?.data?.message || "Error updating property."
-        );
-      } else {
-        toast.error("An unexpected error occurred.");
-      }
+      toast.error("Error updating property.");
     }
   };
 
@@ -140,68 +125,110 @@ export default function ManageProperty() {
     if (!confirm("Are you sure you want to delete this property?")) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/properties/${propertyId}`, {
-        withCredentials: true,
-      });
+      await axios.delete(`${API_BASE_URL}/api/properties/${propertyId}`);
       toast.success("Property deleted successfully!");
       router.push("/dashboard/manage-listings");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        toast.error(
-          error.response?.data?.message || "Error deleting property."
-        );
-      } else {
-        toast.error("An unexpected error occurred.");
-      }
+      toast.error("Error deleting property.");
     }
   };
 
   if (loading) return <p className="text-center py-12">Loading...</p>;
-  if (!property)
-    return <p className="text-center py-12">Property not found.</p>;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 flex justify-center">
-      <Card className="max-w-3xl w-full shadow-xl">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
+      <Card className="max-w-2xl w-full shadow-xl rounded-2xl border-purple-400">
         <CardHeader>
-          <CardTitle className="text-purple-600 text-2xl">
-            ✏️ Edit Property
-          </CardTitle>
+          <CardTitle className="text-purple-600 text-2xl">✏️ Edit Property</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Input
-            placeholder="Property Name"
-            value={property.name}
-            onChange={(e) => setProperty({ ...property, name: e.target.value })}
-          />
-          <Textarea
-            placeholder="Description"
-            value={property.description}
-            onChange={(e) =>
-              setProperty({ ...property, description: e.target.value })
-            }
-          />
-          <Input
-            placeholder="Full Address"
-            value={property.fullAddress}
-            onChange={(e) =>
-              setProperty({ ...property, fullAddress: e.target.value })
-            }
-          />
+        <CardContent>
+          <form className="space-y-6">
+            <Input
+              placeholder="Property Name"
+              value={property.name}
+              onChange={(e) => setProperty({ ...property, name: e.target.value })}
+              required
+            />
+            <Textarea
+              placeholder="Description"
+              value={property.description}
+              onChange={(e) => setProperty({ ...property, description: e.target.value })}
+              required
+            />
+            <Input
+              placeholder="Full Address"
+              value={property.fullAddress}
+              onChange={(e) => setProperty({ ...property, fullAddress: e.target.value })}
+              required
+            />
 
-          <Input type="file" multiple onChange={(e) => setImages(e.target.files)} />
-          <Button onClick={handleImageUpload} className="bg-green-500">
-            <FontAwesomeIcon icon={faUpload} className="mr-2" /> Upload Images
-          </Button>
+            {/* ✅ Category Dropdown */}
+            <select
+              value={property.categoryId}
+              onChange={(e) => setProperty({ ...property, categoryId: e.target.value })}
+              className="w-full border rounded p-2"
+              required
+            >
+              <option value="">Select Category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
 
-          <div className="flex gap-2">
-            <Button onClick={handleSave} className="bg-blue-500">
-              <FontAwesomeIcon icon={faSave} className="mr-2" /> Save Changes
+            {/* ✅ Location Dropdown */}
+            <select
+              value={selectedLocation}
+              onChange={(e) => setSelectedLocation(e.target.value)}
+              className="w-full border rounded p-2"
+              required
+            >
+              <option value="">Select Location</option>
+              {locations.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+            </select>
+
+            {/* ✅ isActive Toggle */}
+            <div className="flex items-center space-x-3">
+              <span className="text-gray-700">Active Status:</span>
+              <input
+                type="checkbox"
+                checked={property.isActive}
+                onChange={(e) => setProperty({ ...property, isActive: e.target.checked })}
+                className="w-5 h-5"
+              />
+            </div>
+
+            {/* ✅ Image Upload & Previews */}
+            {imagePreviews.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative w-20 h-20">
+                    <img src={preview} alt="Preview" className="w-full h-full object-cover rounded-md" />
+                    <button
+                      type="button"
+                      className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded"
+                      onClick={() => handleRemoveImage(index, preview)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Input type="file" multiple accept="image/*" onChange={handleImageChange} />
+
+            <Button onClick={handleSave} className="w-full bg-purple-600 hover:bg-purple-700">
+              Save Changes
             </Button>
-            <Button onClick={handleDeleteProperty} className="bg-red-500">
-              <FontAwesomeIcon icon={faTrash} className="mr-2" /> Delete Property
+            <Button onClick={handleDeleteProperty} className="w-full bg-red-600 hover:bg-red-700 mt-3">
+              Delete Property
             </Button>
-          </div>
+          </form>
         </CardContent>
       </Card>
     </div>
