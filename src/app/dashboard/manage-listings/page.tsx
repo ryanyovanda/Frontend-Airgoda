@@ -71,7 +71,7 @@ export default function ManageListings() {
   };
 
   const handleRoomVariant = (id: string) => {
-    router.push(`/dashboard/manage-listings/${id}`);
+    router.push(`/dashboard/manage-listings/${id}/room-variant`);
   }
 
   const handleDelete = async (id: string) => {

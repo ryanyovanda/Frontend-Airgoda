@@ -121,29 +121,34 @@ export default function ManageProperty() {
     setSelectedIsland(null);
     setSelectedProvince(null);
     setSelectedCity(null);
-    setProperty({ ...property, locationId: "" });
+    
+    setProperty((prev) => prev ? { ...prev, locationId: "" } : prev);
   };
-
+  
   const handleIslandChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const islandId = parseInt(e.target.value);
     setSelectedIsland(islandId);
     setSelectedProvince(null);
     setSelectedCity(null);
-    setProperty({ ...property, locationId: "" });
+  
+    setProperty((prev) => prev ? { ...prev, locationId: "" } : prev);
   };
-
+  
   const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const provinceId = parseInt(e.target.value);
     setSelectedProvince(provinceId);
     setSelectedCity(null);
-    setProperty({ ...property, locationId: "" });
+  
+    setProperty((prev) => prev ? { ...prev, locationId: "" } : prev);
   };
-
+  
   const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const cityId = parseInt(e.target.value);
     setSelectedCity(cityId);
-    setProperty({ ...property, locationId: cityId.toString() });
+  
+    setProperty((prev) => prev ? { ...prev, locationId: cityId.toString() } : prev);
   };
+  
 
   const handleSave = async () => {
     if (!property) return;

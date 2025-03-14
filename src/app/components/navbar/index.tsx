@@ -4,12 +4,47 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGlobe, faBars, faUserCircle } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut, getSession } from "next-auth/react";
 import { useState } from "react";
 
 const Navbar = () => {
   const { data: session } = useSession(); // Get session data
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const handleLogout = async () => {
+    const session = await getSession(); // Get the user session
+    const accessToken = session?.accessToken;
+    const refreshToken = session?.refreshToken;
+  
+    if (accessToken && refreshToken) {
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/logout`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`, // Send Bearer token
+          },
+          body: JSON.stringify({ accessToken, refreshToken }),
+        });
+      } catch (error) {
+        console.error("Logout API error:", error);
+      }
+    }
+  
+    // Force signOut without calling /api/auth/signout (prevents NextAuth from auto handling it)
+    await signOut({ redirect: false });
+  
+    // Manually remove session data (force NextAuth to clear cache)
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+  
+    // Reload page to fully clear NextAuth session
+    window.location.reload();
+  };
+  
 
   return (
     <nav className="flex justify-between items-center p-4 border-b shadow-sm relative">
@@ -66,7 +101,7 @@ const Navbar = () => {
                     </Link>
                   )}
                   <button
-                    onClick={() => signOut()}
+                    onClick={handleLogout}
                     className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
                   >
                     Logout

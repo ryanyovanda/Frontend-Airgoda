@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -14,6 +13,14 @@ import {
   UserCircle2,
   LucideIcon,
 } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 type NavLink = {
   name: string;
@@ -33,7 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleRelogin = () => {
     router.push(
-      "/login?" +
+      "/login" +
         new URLSearchParams({
           login: "true",
           redirectTo: pathname,
@@ -41,14 +48,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   };
 
-  const role = authSession?.user?.role;
-
   const links: NavLink[] = [
     { name: "Profile", href: "/dashboard/profile", icon: UserCircle2 },
     { name: "Manage Listings", href: "/dashboard/manage-listings", icon: ClipboardList },
-    ...(role === "TENANT"
-      ? [{ name: "Analytics & Reports", href: "/dashboard/analytics", icon: BarChart2 }]
-      : []),
     { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
     { name: "Transaction History", href: "/dashboard/transactions", icon: History },
     { name: "Reviews", href: "/dashboard/reviews", icon: Star },
@@ -62,8 +64,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
+  // Breadcrumb Path Segments
+  const pathSegments = pathname.split("/").filter((segment) => segment);
+
   return (
     <div className="flex h-screen w-full">
+      {/* Sidebar Navigation */}
       <aside className="h-full w-64 bg-white shadow-md border-r">
         <nav className="flex flex-col space-y-2 p-4">
           {links.map((link) => {
@@ -85,7 +91,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
       </aside>
 
-      <main className="flex-1 overflow-auto bg-gray-100 p-6">{children}</main>
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto bg-gray-100 p-6">
+        {/* Breadcrumb Navigation - Fix for inline display */}
+        <Breadcrumb className="flex flex-wrap items-center space-x-1 text-gray-600 text-sm">
+          <BreadcrumbList className="flex items-center space-x-1">
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/">Home</BreadcrumbLink>
+            </BreadcrumbItem>
+            {pathSegments.length > 0 && <BreadcrumbSeparator />}
+            {pathSegments.map((segment, index) => {
+              const href = "/" + pathSegments.slice(0, index + 1).join("/");
+              const isLast = index === pathSegments.length - 1;
+
+              return (
+                <span key={href} className="flex items-center space-x-1">
+                  <BreadcrumbItem>
+                    {isLast ? (
+                      <BreadcrumbPage className="text-black font-semibold">
+                        {decodeURIComponent(segment)}
+                      </BreadcrumbPage>
+                    ) : (
+                      <BreadcrumbLink href={href}>{decodeURIComponent(segment)}</BreadcrumbLink>
+                    )}
+                  </BreadcrumbItem>
+                  {!isLast && <BreadcrumbSeparator />}
+                </span>
+              );
+            })}
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        {/* Page Content */}
+        <div className="mt-4">{children}</div>
+      </main>
     </div>
   );
 }
