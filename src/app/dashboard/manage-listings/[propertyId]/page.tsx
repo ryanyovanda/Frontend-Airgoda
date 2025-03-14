@@ -8,8 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import axios from "axios";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSave, faTrash, faUpload } from "@fortawesome/free-solid-svg-icons";
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
@@ -33,6 +32,7 @@ interface Property {
   locationId: string;
   fullAddress: string;
   isActive: boolean;
+  imageIds: number[];
   imageUrls: string[];
 }
 
@@ -46,21 +46,19 @@ export default function ManageProperty() {
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteImageIndex, setDeleteImageIndex] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch Property Details
         const propertyRes = await axios.get(`${API_BASE_URL}/api/properties/${propertyId}`);
         setProperty(propertyRes.data);
         setSelectedLocation(propertyRes.data.locationId);
         setImagePreviews(propertyRes.data.imageUrls || []);
 
-        // Fetch Categories
         const categoriesRes = await axios.get(`${API_BASE_URL}/categories`);
         setCategories(categoriesRes.data);
 
-        // Fetch Locations
         const locationsRes = await axios.get(`${API_BASE_URL}/api/locations`);
         setLocations(locationsRes.data);
       } catch (error) {
@@ -81,20 +79,35 @@ export default function ManageProperty() {
     setImagePreviews((prev) => [...prev, ...newPreviews]);
   };
 
-  const handleRemoveImage = async (index: number, imageUrl?: string) => {
-    if (imageUrl) {
+  const confirmDeleteImage = (index: number) => {
+    setDeleteImageIndex(index); // Open confirmation modal
+  };
+
+  const handleRemoveImage = async () => {
+    if (deleteImageIndex === null || !property) return;
+
+    const imageId = property.imageIds[deleteImageIndex];
+
+    if (imageId) {
       try {
-        await axios.delete(`${API_BASE_URL}/api/properties/${propertyId}/images`, {
-          params: { imageUrl },
-        });
+        await axios.delete(`${API_BASE_URL}/api/properties/image/${imageId}`);
         toast.success("Image deleted successfully!");
+
+        setProperty((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            imageIds: prev.imageIds.filter((_, i) => i !== deleteImageIndex),
+            imageUrls: prev.imageUrls.filter((_, i) => i !== deleteImageIndex),
+          };
+        });
+
+        setImagePreviews((prev) => prev.filter((_, i) => i !== deleteImageIndex));
       } catch (error) {
         toast.error("Error deleting image.");
-        return;
       }
     }
-    setImages((prev) => prev.filter((_, i) => i !== index));
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    setDeleteImageIndex(null);
   };
 
   const handleSave = async () => {
@@ -110,6 +123,7 @@ export default function ManageProperty() {
           categoryId: Number(property.categoryId),
           locationId: Number(selectedLocation),
           fullAddress: property.fullAddress,
+          imageUrls: property.imageUrls, // Ensure images are correctly passed
         },
         { withCredentials: true }
       );
@@ -143,65 +157,30 @@ export default function ManageProperty() {
         </CardHeader>
         <CardContent>
           <form className="space-y-6">
-            <Input
-              placeholder="Property Name"
-              value={property.name}
-              onChange={(e) => setProperty({ ...property, name: e.target.value })}
-              required
-            />
-            <Textarea
-              placeholder="Description"
-              value={property.description}
-              onChange={(e) => setProperty({ ...property, description: e.target.value })}
-              required
-            />
-            <Input
-              placeholder="Full Address"
-              value={property.fullAddress}
-              onChange={(e) => setProperty({ ...property, fullAddress: e.target.value })}
-              required
-            />
-
-            {/* ✅ Category Dropdown */}
-            <select
-              value={property.categoryId}
-              onChange={(e) => setProperty({ ...property, categoryId: e.target.value })}
-              className="w-full border rounded p-2"
-              required
-            >
-              <option value="">Select Category</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-
-            {/* ✅ Location Dropdown */}
-            <select
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-              className="w-full border rounded p-2"
-              required
-            >
-              <option value="">Select Location</option>
-              {locations.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.name}
-                </option>
-              ))}
-            </select>
-
-            {/* ✅ isActive Toggle */}
-            <div className="flex items-center space-x-3">
-              <span className="text-gray-700">Active Status:</span>
-              <input
-                type="checkbox"
-                checked={property.isActive}
-                onChange={(e) => setProperty({ ...property, isActive: e.target.checked })}
-                className="w-5 h-5"
-              />
-            </div>
+          <Input
+  placeholder="Property Name"
+  value={property?.name || ""}
+  onChange={(e) =>
+    setProperty((prev) => ({ ...prev!, name: e.target.value }))
+  }
+  required
+/>
+<Textarea
+  placeholder="Description"
+  value={property?.description || ""}
+  onChange={(e) =>
+    setProperty((prev) => ({ ...prev!, description: e.target.value }))
+  }
+  required
+/>
+<Input
+  placeholder="Full Address"
+  value={property?.fullAddress || ""}
+  onChange={(e) =>
+    setProperty((prev) => ({ ...prev!, fullAddress: e.target.value }))
+  }
+  required
+/>
 
             {/* ✅ Image Upload & Previews */}
             {imagePreviews.length > 0 && (
@@ -209,11 +188,7 @@ export default function ManageProperty() {
                 {imagePreviews.map((preview, index) => (
                   <div key={index} className="relative w-20 h-20">
                     <img src={preview} alt="Preview" className="w-full h-full object-cover rounded-md" />
-                    <button
-                      type="button"
-                      className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded"
-                      onClick={() => handleRemoveImage(index, preview)}
-                    >
+                    <button type="button" className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded" onClick={() => confirmDeleteImage(index)}>
                       ✕
                     </button>
                   </div>
@@ -231,6 +206,20 @@ export default function ManageProperty() {
           </form>
         </CardContent>
       </Card>
+
+      {/* ✅ ChadCN Dialog for Delete Confirmation */}
+      <Dialog open={deleteImageIndex !== null} onOpenChange={() => setDeleteImageIndex(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Image</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to delete this image?</p>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setDeleteImageIndex(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRemoveImage}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
