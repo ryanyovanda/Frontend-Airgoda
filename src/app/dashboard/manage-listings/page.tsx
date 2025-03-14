@@ -70,6 +70,10 @@ export default function ManageListings() {
     router.push(`/dashboard/manage-listings/${id}`);
   };
 
+  const handleRoomVariant = (id: string) => {
+    router.push(`/dashboard/manage-listings/${id}`);
+  }
+
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this property?")) {
       try {
@@ -133,6 +137,9 @@ export default function ManageListings() {
                     <TableCell>{property.totalRoomVariants}</TableCell>
                     <TableCell>{getCategoryName(property.categoryId)}</TableCell> {/* ✅ Updated */}
                     <TableCell className="flex gap-2">
+                      <Button variant="outline" onClick={() => handleRoomVariant(property.id)}>
+                      <FontAwesomeIcon icon={faEdit} className="mr-1" /> Room Variant
+                      </Button>
                       <Button variant="outline" onClick={() => handleEdit(property.id)}>
                         <FontAwesomeIcon icon={faEdit} className="mr-1" /> Edit
                       </Button>

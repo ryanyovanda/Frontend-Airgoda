@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import axios from "axios";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   ClipboardList,
@@ -23,24 +23,25 @@ type NavLink = {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [role, setRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const { data: authSession, status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      void handleRelogin();
+    },
+  });
 
-  useEffect(() => {
-    async function fetchSession() {
-      try {
-        const response = await axios.get("/api/auth/session");
-        const fetchedRole = response.data?.user?.role;
-        setRole(fetchedRole);
-      } catch (error) {
-        console.error("Error fetching session:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
+  const handleRelogin = () => {
+    router.push(
+      "/login?" +
+        new URLSearchParams({
+          login: "true",
+          redirectTo: pathname,
+        })
+    );
+  };
 
-    fetchSession();
-  }, []);
+  const role = authSession?.user?.role;
 
   const links: NavLink[] = [
     { name: "Profile", href: "/dashboard/profile", icon: UserCircle2 },
@@ -53,7 +54,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Reviews", href: "/dashboard/reviews", icon: Star },
   ];
 
-  if (loading) {
+  if (status === "loading") {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Loading dashboard...</p>
