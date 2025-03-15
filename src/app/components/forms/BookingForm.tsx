@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, isWithinInterval } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { DateRange } from "react-day-picker";
 
@@ -12,6 +12,14 @@ interface RoomVariant {
   id: number;
   name: string;
   price: number;
+}
+
+interface PeakRate {
+  id: number;
+  roomVariantId: number;
+  startDate: string;
+  endDate: string;
+  additionalPrice: number;
 }
 
 interface SessionData {
@@ -24,29 +32,87 @@ interface BookingFormProps {
   roomVariants?: RoomVariant[];
 }
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
 const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = [] }) => {
   const router = useRouter();
-  const [selectedRoom, setSelectedRoom] = useState<number | null>(
-    roomVariants.length > 0 ? roomVariants[0].id : null
-  );
+  const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [guests, setGuests] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
   const [totalPrice, setTotalPrice] = useState<number>(0);
+  const [peakRates, setPeakRates] = useState<PeakRate[]>([]);
 
+  // ✅ Fetch peak rates when room is selected
   useEffect(() => {
-    if (dateRange?.from && dateRange?.to && selectedRoom) {
-      const selectedRoomVariant = roomVariants.find((room) => room.id === selectedRoom);
-      if (selectedRoomVariant) {
-        const nights = differenceInDays(dateRange.to, dateRange.from);
-        if (nights > 0) {
-          setTotalPrice(nights * selectedRoomVariant.price);
-        } else {
-          setTotalPrice(0);
-        }
-      }
+    if (selectedRoom) {
+      fetchPeakRates(selectedRoom);
     }
+  }, [selectedRoom]);
+
+  // ✅ Recalculate price when date or room changes
+  useEffect(() => {
+    calculateFinalPrice();
   }, [dateRange, selectedRoom]);
+
+  // ✅ Fetch only peak rates for selected room
+  const fetchPeakRates = async (roomId: number) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/peak-rates`);
+      if (!response.ok) throw new Error("Failed to fetch peak rates");
+
+      const allPeakRates = await response.json();
+
+      // ✅ Filter peak rates only for the selected room variant
+      const filteredPeakRates = allPeakRates.filter((rate: PeakRate) => rate.roomVariantId === roomId);
+
+      setPeakRates(filteredPeakRates);
+    } catch (error) {
+      console.error("Error fetching peak rates:", error);
+    }
+  };
+
+  // ✅ Calculate total price (excluding checkout date)
+  const calculateFinalPrice = () => {
+    if (!dateRange?.from || !dateRange?.to || !selectedRoom) {
+      setTotalPrice(0);
+      return;
+    }
+
+    const selectedRoomVariant = roomVariants.find((room) => room.id === selectedRoom);
+    if (!selectedRoomVariant) return;
+
+    let finalPrice = 0;
+
+    // ✅ Calculate correct nights (checkout date excluded)
+    let nights = differenceInDays(dateRange.to, dateRange.from);
+    if (nights < 1) return; // Ensure at least 1 night is counted
+
+    for (let i = 0; i < nights; i++) {
+      const currentDate = new Date(dateRange.from);
+      currentDate.setDate(currentDate.getDate() + i);
+      const dateString = format(currentDate, "yyyy-MM-dd");
+
+      let priceForTheDay = selectedRoomVariant.price;
+
+      // ✅ Apply only peak rates for this room
+      const peakRate = peakRates.find(
+        (rate) =>
+          isWithinInterval(new Date(dateString), {
+            start: new Date(rate.startDate),
+            end: new Date(rate.endDate),
+          })
+      );
+
+      if (peakRate) {
+        priceForTheDay += peakRate.additionalPrice;
+      }
+
+      finalPrice += priceForTheDay;
+    }
+
+    setTotalPrice(finalPrice);
+  };
 
   const fetchSession = async (): Promise<SessionData | null> => {
     try {
@@ -93,7 +159,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
     console.log("Booking Payload:", JSON.stringify(payload, null, 2));
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/orders`, {
+      const response = await fetch(`${BACKEND_URL}/orders`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
@@ -122,22 +188,23 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
     <div className="border p-6 rounded-lg shadow-md">
       <form onSubmit={handleBooking}>
         {/* Select Room Variant */}
-        <label className="block">Room:</label>
+        <label className="block text-lg font-semibold">Room:</label>
         <select
           className="w-full border p-2 rounded"
           value={selectedRoom || ""}
           onChange={(e) => setSelectedRoom(Number(e.target.value))}
           required
         >
+          <option value="">Choose Room Variant</option>
           {roomVariants.map((room) => (
             <option key={room.id} value={room.id}>
-              {room.name} - Rp. {room.price.toLocaleString()} / night
+              {room.name}
             </option>
           ))}
         </select>
 
         {/* Date Picker with Range Selection */}
-        <label className="block mt-4">Select Check-in & Check-out Dates:</label>
+        <label className="block mt-4 text-lg font-semibold">Select Check-in & Check-out Dates:</label>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full text-left">
@@ -157,7 +224,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
         </Popover>
 
         {/* Guests Selection */}
-        <label className="block mt-4">Guests:</label>
+        <label className="block mt-4 text-lg font-semibold">Guests:</label>
         <input
           type="number"
           value={guests}
@@ -180,7 +247,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
         <button
           type="submit"
           disabled={loading}
-          className="bg-pink-600 text-white p-3 rounded w-full mt-4 font-bold hover:bg-pink-700 transition"
+          className="bg-purple-500 text-white p-3 rounded w-full mt-4 font-bold hover:bg-pink-700 transition"
         >
           {loading ? "Booking..." : "Reserve"}
         </button>

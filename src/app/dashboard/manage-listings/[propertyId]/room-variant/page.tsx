@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
 
 // Define Room Variant Type
 interface RoomVariant {
@@ -64,6 +64,14 @@ export default function RoomVariantList() {
     router.push(`/dashboard/manage-listings/${propertyId}/room-variant/new`);
   };
 
+  const handleEditRoomVariant = (roomVariantId: number) => {
+    router.push(`/dashboard/manage-listings/${propertyId}/room-variant/${roomVariantId}`);
+  };
+
+  const handleManagePeakRates = (roomVariantId: number) => {
+    router.push(`/dashboard/manage-listings/${propertyId}/room-variant/${roomVariantId}/peak-rates`);
+  };
+
   if (loading) return <p className="text-center py-12">Loading room variants...</p>;
   if (error) return <p className="text-center text-red-500">{error}</p>;
 
@@ -72,7 +80,7 @@ export default function RoomVariantList() {
       <Card className="w-full max-w-5xl shadow-xl">
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle className="text-purple-600 text-2xl">🏨 {propertyName} - Room Variants</CardTitle>
-          <Button onClick={handleAddRoomVariant}>
+          <Button onClick={handleAddRoomVariant} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
             <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Room Variant
           </Button>
         </CardHeader>
@@ -93,6 +101,7 @@ export default function RoomVariantList() {
                   <TableHead>Capacity</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Facilities</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -113,6 +122,20 @@ export default function RoomVariantList() {
                           <span className="text-gray-500">No Facilities</span>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell className="flex gap-2">
+                      <Button
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg"
+                        onClick={() => handleEditRoomVariant(variant.id)}
+                      >
+                        <FontAwesomeIcon icon={faEdit} className="mr-2" /> Edit
+                      </Button>
+                      <Button
+                        className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg"
+                        onClick={() => handleManagePeakRates(variant.id)}
+                      >
+                        <FontAwesomeIcon icon={faCalendarAlt} className="mr-2" /> Peak Rates
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
