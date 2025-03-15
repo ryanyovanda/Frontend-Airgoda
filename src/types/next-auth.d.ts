@@ -1,8 +1,6 @@
-import "next-auth";
 import { DefaultSession } from "next-auth";
+import { JWT } from "next-auth/jwt";
 import { TokenClaims } from "./auth/TokenPair";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { JWT } from "next-auth/jwt"
 
 declare module "next-auth" {
   interface Session {
@@ -10,11 +8,12 @@ declare module "next-auth" {
     refreshToken: string;
     error?: string;
     user: {
-      id: string;
+      id: number;
       email: string;
       roles: string[];
       name: string;
       isVerified: boolean;
+      imageUrl?: string | null;
     } & DefaultSession["user"];
   }
 
@@ -22,11 +21,11 @@ declare module "next-auth" {
     accessToken: {
       claims: TokenClaims;
       value: string;
-    }
+    };
     refreshToken: {
       claims: TokenClaims;
       value: string;
-    }
+    };
   }
 
   interface User {
@@ -35,20 +34,26 @@ declare module "next-auth" {
     userId: number;
     name: string;
     isVerified: boolean;
+    imageUrl?: string | null;
   }
 }
 
 declare module "next-auth/jwt" {
-  interface JWT extends JWT {
+  interface JWT {
     roles: string[];
     accessToken: {
       claims: TokenClaims;
       value: string;
-    }
+    };
     refreshToken: {
       claims: TokenClaims;
       value: string;
-    }
+    };
+    userId: number;
+    name: string;
+    email: string;
+    isVerified?: boolean;
+    imageUrl?: string | null;
     error?: string;
   }
 }

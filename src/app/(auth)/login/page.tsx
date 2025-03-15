@@ -135,11 +135,11 @@ const LoginPage: FC = () => {
 
         {/* Terms & Privacy Policy */}
         <p className="text-center text-gray-500 text-sm">
-          By signing in, I agree to Agoda&apos;s{" "}
+          By signing in, I agree to Agoda&apos;
           <a href="#" className="text-blue-500">
             Terms of Use
-          </a>{" "}
-          and{" "}
+          </a>
+          and
           <a href="#" className="text-blue-500">
             Privacy Policy
           </a>

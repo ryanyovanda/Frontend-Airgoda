@@ -2,65 +2,128 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
 
-const PUBLIC_PATHS = ["/","/login", "/register", "/transactiondetail"];
-const PROTECTED_PATHS = ["/dashboard", "/trx/reports"];
+const PUBLIC_PATHS = [
+
+  "/login",
+  "/register",
+  "/register-tenant"
+];
+
+const PROTECTED_PATHS = [
+  "/dashboard",
+  "/dashboard/manage-listings",
+  "/dashboard/manage-listings/[propertyId]",
+  "/dashboard/manage-listings/[propertyId]/room-variant",
+  "/dashboard/manage-listings/[propertyId]/room-variant/new",
+  "/dashboard/manage-listings/new",
+  "/dashboard/profile",
+  "/properties/[id]",
+  "/verify"
+];
+
 const ROLE_PATHS = {
-  TENANT: ["/dashboard"],
-  ADMIN: ["*"], // Admin can access everything
+  ADMIN: [
+    "/dashboard",
+    "/dashboard/manage-listings",
+    "/dashboard/manage-listings/[propertyId]",
+    "/dashboard/manage-listings/[propertyId]/room-variant",
+    "/dashboard/manage-listings/[propertyId]/room-variant/new",
+    "/dashboard/manage-listings/new",
+    "/dashboard/profile"
+  ],
+  TENANT: [
+    "/dashboard/profile",
+    "/dashboard/manage-listings",
+    "/dashboard/manage-listings/[propertyId]",
+    "/dashboard/manage-listings/[propertyId]/room-variant",
+    "/dashboard/manage-listings/[propertyId]/room-variant/new",
+    "/dashboard/manage-listings/new"
+  ],
+  USER: [
+    "/properties/[id]",
+    "/dashboard/profile",
+    "/verify"
+  ]
 };
 
-// Function to retrieve session
+// Retrieve session
 async function getSession() {
-  try {
-    return await auth();
-  } catch (error) {
-    console.error("[Middleware] Failed to retrieve session:", error);
-    return null;
-  }
+  return await auth();
 }
 
 // Check if path is public
 function isPublicPath(pathname: string) {
-  return PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+  return pathname === "/" || PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 }
+
 
 // Check if path is protected
 function isProtectedPath(pathname: string) {
   return PROTECTED_PATHS.some((path) => pathname.startsWith(path));
 }
 
-// Check if user has required role for path
+// Check if user has the required role for the path
 function hasRequiredRole(userRoles: string[], pathname: string) {
-  if (userRoles.includes("ADMIN")) return true;
-  return Object.entries(ROLE_PATHS).some(([role, paths]) =>
-    paths.some((path) => pathname.startsWith(path)) && userRoles.includes(role)
-  );
+  const normalizedRoles = userRoles.map(role => role.toUpperCase());
+
+  console.log(`[Middleware] Checking role-based access for ${pathname}`);
+  console.log("[Middleware] User Roles:", normalizedRoles);
+  console.log("[Middleware] Role Paths:", ROLE_PATHS);
+
+  if (normalizedRoles.includes("ADMIN")) {
+    console.log(`[Middleware] ✅ ADMIN role detected - access granted to ${pathname}`);
+    return true;
+  }
+
+  for (const [role, paths] of Object.entries(ROLE_PATHS)) {
+    if (paths.some((path) => pathname.startsWith(path)) && normalizedRoles.includes(role)) {
+      console.log(`[Middleware] ✅ Access Granted: ${role} can access ${pathname}`);
+      return true;
+    }
+  }
+
+  console.warn(`[Middleware] ❌ Access Denied: No matching roles for ${pathname}`);
+  return false;
 }
 
 export async function middleware(request: NextRequest) {
   const session = await getSession();
   const { pathname } = request.nextUrl;
-
-  // ✅ Ensure absolute URLs are used for redirection
   const origin = request.nextUrl.origin;
 
-  // Allow access to public paths
-  if (isPublicPath(pathname)) {
+  console.log(`[Middleware] Checking access for: ${pathname}`);
+
+  // ✅ Allow static assets to load without restriction
+  if (pathname.startsWith("/_next/static")) {
+    console.log(`[Middleware] ✅ Allowing static asset: ${pathname}`);
     return NextResponse.next();
   }
 
-  // Check if user is authorized for protected paths
-  if (isProtectedPath(pathname)) {
-    if (!session) {
-      console.warn("[Middleware] No session found, redirecting to /login");
-      return NextResponse.redirect(new URL("/login", origin));
-    }
+  // ✅ Allow all public paths including "/"
+  if (isPublicPath(pathname)) {
+    console.log(`[Middleware] ✅ Allowing public access to: ${pathname}`);
+    return NextResponse.next();
+  }
 
-    const userRoles = session.user?.roles || [];
-    if (!hasRequiredRole(userRoles, pathname)) {
-      console.warn(`[Middleware] User lacks required role(s), redirecting to /unauthorized`);
-      return NextResponse.redirect(new URL("/unauthorized", origin));
-    }
+  // 🔴 If path is protected but no session exists, redirect to login
+  if (!session && isProtectedPath(pathname)) {
+    console.warn(`[Middleware] ❌ No session found, redirecting to /login`);
+    return NextResponse.redirect(new URL("/login", origin));
+  }
+
+  const userRoles = session?.user?.roles || [];
+  console.log(`[Middleware] User Roles for ${pathname}:`, userRoles);
+
+  // ✅ Allow direct access to "/unauthorized" to prevent redirect loops
+  if (pathname === "/unauthorized") {
+    console.log(`[Middleware] ✅ Allowing access to /unauthorized`);
+    return NextResponse.next();
+  }
+
+  // 🔴 Ensure protected paths require the correct roles
+  if (isProtectedPath(pathname) && !hasRequiredRole(userRoles, pathname)) {
+    console.warn(`[Middleware] ❌ Access Denied: Redirecting to /unauthorized`);
+    return NextResponse.redirect(new URL("/unauthorized", origin));
   }
 
   return NextResponse.next();

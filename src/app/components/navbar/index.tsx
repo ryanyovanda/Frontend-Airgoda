@@ -94,10 +94,10 @@ const Navbar = () => {
                   </Link>
                   {session?.user?.roles?.includes("TENANT") && (
                     <Link
-                      href="/dashboard"
+                      href="/dashboard/manage-listings"
                       className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
                     >
-                      Dashboard
+                      Manage Listings
                     </Link>
                   )}
                   <button

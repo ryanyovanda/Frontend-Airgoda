@@ -31,26 +31,15 @@ type NavLink = {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: authSession, status } = useSession({
-    required: true,
-    onUnauthenticated() {
-      void handleRelogin();
-    },
-  });
-
-  const handleRelogin = () => {
-    router.push(
-      "/login" +
-        new URLSearchParams({
-          login: "true",
-          redirectTo: pathname,
-        })
-    );
-  };
-
+  const { data: session, status } = useSession();
+    
   const links: NavLink[] = [
+   
     { name: "Profile", href: "/dashboard/profile", icon: UserCircle2 },
-    { name: "Manage Listings", href: "/dashboard/manage-listings", icon: ClipboardList },
+    ...(session?.user?.roles?.includes("TENANT")
+    ? [{ name: "Manage Listings", href: "/dashboard/manage-listings", icon: ClipboardList }]
+    : []),
+    
     { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
     { name: "Transaction History", href: "/dashboard/transactions", icon: History },
     { name: "Reviews", href: "/dashboard/reviews", icon: Star },

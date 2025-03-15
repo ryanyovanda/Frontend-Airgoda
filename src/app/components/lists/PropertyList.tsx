@@ -6,8 +6,8 @@ import axios from "axios";
 import PropertyListCard from "./PropertyListCard";
 import { Button } from "@/components/ui/button";
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
-// ✅ Define Types
 interface Category {
   id: number;
   name: string;
@@ -26,107 +26,101 @@ interface Property {
   description: string;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+interface PropertyListProps {
+  initialCategories: Category[];
+  initialLocations: Location[];
+}
 
-const PropertyList = ({ initialCategories = [], initialLocations = [] }) => { // ✅ Default to empty array
+export default function PropertyList({ initialCategories, initialLocations }: PropertyListProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const searchQuery = searchParams.get("search") || "";
-  const categoryFilter = searchParams.get("categoryId") || "";
-  const locationFilter = searchParams.get("locationId") || "";
+
+  // ✅ Get params from URL
+  const page = parseInt(searchParams.get("page") || "0");
+  const size = 10;
+  const searchQuery = searchParams.get("keyword") || "";
+  const locationId = searchParams.get("locationId") || "";
+  const categoryId = searchParams.get("categoryId") || "";
 
   const [properties, setProperties] = useState<Property[]>([]);
-  const [categories, setCategories] = useState<Category[]>(initialCategories || []); // ✅ Ensure it's an array
-  const [locations, setLocations] = useState<Location[]>(initialLocations || []); // ✅ Ensure it's an array
-  const [selectedCategory, setSelectedCategory] = useState(categoryFilter);
-  const [selectedLocation, setSelectedLocation] = useState(locationFilter);
-  const [page, setPage] = useState(0);
-  const [size] = useState(30);
   const [totalPages, setTotalPages] = useState(1);
+  const [categories] = useState<Category[]>(initialCategories);
+  const [locations] = useState<Location[]>(initialLocations);
 
-  // ✅ Fetch properties when search query, category, location, or page changes
+  // ✅ Fetch properties when URL params change
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        let url = `${BACKEND_URL}/api/properties/filter?page=${page}&size=${size}`;
+        let url = `${BACKEND_URL}/api/properties`;
 
         if (searchQuery) {
           url = `${BACKEND_URL}/api/properties/search?keyword=${encodeURIComponent(searchQuery)}`;
-        }
-        if (selectedCategory) {
-          url += `&categoryId=${selectedCategory}`;
-        }
-        if (selectedLocation) {
-          url += `&locationId=${selectedLocation}`;
+        } else {
+          url = `${BACKEND_URL}/api/properties/filter`;
         }
 
-        console.log("Fetching properties from:", url);
+        const response = await axios.get(url, {
+          params: {
+            locationId,
+            categoryId,
+            page,
+            size,
+          },
+        });
 
-        const response = await axios.get(url);
         setProperties(response.data.content || []);
-        setTotalPages(response.data.totalPages);
+        setTotalPages(response.data.totalPages || 1);
       } catch (error) {
-        console.error("Failed to fetch properties:", error);
+        console.error("Error fetching properties:", error);
       }
     };
 
     fetchProperties();
-  }, [searchQuery, selectedCategory, selectedLocation, page]);
+  }, [locationId, categoryId, page]);
 
-/// ✅ Handle Category Change
-const handleCategoryChange = (categoryId: string) => {
-  setSelectedCategory(categoryId);
-  updateURL({ categoryId });
-};
+  // ✅ Function to update URL on filter or pagination change
+  const updateURL = (newParams: { categoryId?: string; locationId?: string; keyword?: string; page?: number }) => {
+    const params = new URLSearchParams(searchParams.toString());
 
-// ✅ Handle Location Change
-const handleLocationChange = (locationId: string) => {
-  setSelectedLocation(locationId);
-  updateURL({ locationId });
-};
+    if (newParams.categoryId !== undefined) {
+      newParams.categoryId ? params.set("categoryId", newParams.categoryId) : params.delete("categoryId");
+    }
+    if (newParams.locationId !== undefined) {
+      newParams.locationId ? params.set("locationId", newParams.locationId) : params.delete("locationId");
+    }
+    if (newParams.page !== undefined) {
+      params.set("page", newParams.page.toString());
+    }
 
-// ✅ Update the URL to reflect filters
-const updateURL = (newParams: { categoryId?: string; locationId?: string }) => {
-  const params = new URLSearchParams(searchParams.toString());
-
-  if (newParams.categoryId !== undefined) {
-    newParams.categoryId ? params.set("categoryId", newParams.categoryId) : params.delete("categoryId");
-  }
-  if (newParams.locationId !== undefined) {
-    newParams.locationId ? params.set("locationId", newParams.locationId) : params.delete("locationId");
-  }
-
-  router.push(`/?${params.toString()}`);
-};
+    router.push(`/?${params.toString()}`);
+  };
 
   return (
-    <div className="container mx-auto p-6">
-
-
-      {/* ✅ Filters Section */}
+    <div className="space-y-4">
+      {/* ✅ Filters */}
       <div className="flex flex-wrap items-center gap-4 py-4">
-        {/* ✅ Category Dropdown */}
+        {/* Category Dropdown */}
         <select
           className="border rounded-md px-4 py-2"
-          value={selectedCategory}
-          onChange={(e) => handleCategoryChange(e.target.value)}
+          value={categoryId}
+          onChange={(e) => updateURL({ categoryId: e.target.value, page: 0 })}
         >
           <option value="">All Categories</option>
-          {categories.map((category) => ( // ✅ Now it won't error
+          {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
             </option>
           ))}
         </select>
 
-        {/* ✅ Location Dropdown */}
+        {/* Location Dropdown */}
         <select
           className="border rounded-md px-4 py-2"
-          value={selectedLocation}
-          onChange={(e) => handleLocationChange(e.target.value)}
+          value={locationId}
+          onChange={(e) => updateURL({ locationId: e.target.value, page: 0 })}
         >
           <option value="">All Locations</option>
-          {locations.map((location) => ( // ✅ Now it won't error
+          {locations.map((location) => (
             <option key={location.id} value={location.id}>
               {location.name}
             </option>
@@ -142,8 +136,17 @@ const updateURL = (newParams: { categoryId?: string; locationId?: string }) => {
           <p className="text-gray-500 text-center col-span-5">No properties available.</p>
         )}
       </div>
+
+      {/* ✅ Pagination Controls */}
+      <div className="flex justify-center space-x-4 mt-6">
+        <Button onClick={() => updateURL({ page: page - 1 })} disabled={page === 0}>
+          Previous
+        </Button>
+        <span>Page {page + 1} of {totalPages}</span>
+        <Button onClick={() => updateURL({ page: page + 1 })} disabled={page >= totalPages - 1}>
+          Next
+        </Button>
+      </div>
     </div>
   );
-};
-
-export default PropertyList;
+}
