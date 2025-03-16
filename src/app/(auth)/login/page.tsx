@@ -31,7 +31,6 @@ const LoginPage: FC = () => {
     try {
       const result = await signIn("google", { callbackUrl: "/" });
       if (!result?.ok) {
-        setError(result?.error || "Google login failed. Try again.");
       }
     } catch (error) {
       console.error("Google login error:", error);
@@ -72,7 +71,7 @@ const LoginPage: FC = () => {
   return (
     <div className="flex items-center justify-center h-screen">
       <div className="w-fit h-fit flex flex-col gap-4 p-6 border border-gray-300 rounded-lg shadow-lg bg-white">
-        <h1 className="text-2xl font-bold text-center">Sign in or create an account</h1>
+        <h1 className="text-2xl font-bold text-center">Sign in</h1>
         <p className="text-center text-gray-600">
           Sign up for free or log in to access amazing deals and benefits!
         </p>
@@ -134,6 +133,7 @@ const LoginPage: FC = () => {
         </Formik>
 
         {/* Terms & Privacy Policy */}
+        <p className="text-center text-blue-400 text-sm"><a href="/forget-password">Forget Password?</a></p>
         <p className="text-center text-gray-500 text-sm">
           By signing in, I agree to Agoda&apos;
           <a href="#" className="text-blue-500">

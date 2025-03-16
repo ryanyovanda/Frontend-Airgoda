@@ -1,8 +1,8 @@
 'use client';
 
+import { FC, useState } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 // Define TypeScript Interface for Form Values
@@ -12,31 +12,25 @@ interface RegisterFormValues {
   confirmPassword: string;
 }
 
-const Register = () => {
+const validationSchema = Yup.object({
+  email: Yup.string().email('Invalid email address').required('Email is required'),
+  password: Yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
+  confirmPassword: Yup.string()
+    .oneOf([Yup.ref('password')], 'Passwords must match')
+    .required('Confirm Password is required'),
+});
+
+const RegisterPage: FC = () => {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const initialValues: RegisterFormValues = {
-    email: '',
-    password: '',
-    confirmPassword: ''
-  };
-
-  const validationSchema = Yup.object({
-    email: Yup.string().email('Invalid email').required('Email is required'),
-    password: Yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
-    confirmPassword: Yup.string()
-      .oneOf([Yup.ref('password'), undefined], 'Passwords must match') // ✅ FIXED
-      .required('Confirm Password is required')
-  });
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (
     values: RegisterFormValues,
     { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void }
   ) => {
-    setLoading(true);
-    setError('');
+    setError(null);
+    setIsLoading(true);
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/users/register`, {
@@ -47,7 +41,7 @@ const Register = () => {
         body: JSON.stringify({
           email: values.email,
           password: values.password,
-          role: 'USER'
+          role: 'USER',
         }),
       });
 
@@ -61,47 +55,80 @@ const Register = () => {
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-center">Register</h2>
-        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
-        <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={handleSubmit}>
+    <div className="flex items-center justify-center h-screen">
+      <div className="w-fit h-fit flex flex-col gap-4 p-6 border border-gray-300 rounded-lg shadow-lg bg-white">
+        <h1 className="text-2xl font-bold text-center">Register</h1>
+        <p className="text-center text-gray-600">
+          Sign up for free and start enjoying amazing deals and benefits!
+        </p>
+
+        {/* Formik Form for Registration */}
+        <Formik
+          initialValues={{ email: '', password: '', confirmPassword: '' }}
+          validationSchema={validationSchema}
+          onSubmit={handleSubmit}
+        >
           {({ isSubmitting }) => (
-            <Form className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium">Email</label>
-                <Field type="email" name="email" className="w-full border p-2 rounded" />
-                <ErrorMessage name="email" component="div" className="text-red-500 text-sm" />
+            <Form className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="email" className="font-medium">
+                  Email
+                </label>
+                <Field id="email" type="email" name="email" className="border border-gray-300 p-2 rounded text-black" />
+                <ErrorMessage name="email" component="span" className="text-red-500" />
               </div>
-              <div>
-                <label className="block text-sm font-medium">Password</label>
-                <Field type="password" name="password" className="w-full border p-2 rounded" />
-                <ErrorMessage name="password" component="div" className="text-red-500 text-sm" />
+              <div className="flex flex-col gap-2">
+                <label htmlFor="password" className="font-medium">
+                  Password
+                </label>
+                <Field
+                  id="password"
+                  type="password"
+                  name="password"
+                  className="border border-gray-300 p-2 rounded text-black"
+                />
+                <ErrorMessage name="password" component="span" className="text-red-500" />
               </div>
-              <div>
-                <label className="block text-sm font-medium">Confirm Password</label>
-                <Field type="password" name="confirmPassword" className="w-full border p-2 rounded" />
-                <ErrorMessage name="confirmPassword" component="div" className="text-red-500 text-sm" />
+              <div className="flex flex-col gap-2">
+                <label htmlFor="confirmPassword" className="font-medium">
+                  Confirm Password
+                </label>
+                <Field
+                  id="confirmPassword"
+                  type="password"
+                  name="confirmPassword"
+                  className="border border-gray-300 p-2 rounded text-black"
+                />
+                <ErrorMessage name="confirmPassword" component="span" className="text-red-500" />
               </div>
               <button
+                disabled={isSubmitting || isLoading}
                 type="submit"
-                className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
-                disabled={isSubmitting || loading}
+                className="bg-[#8A2DE2] text-white p-2 rounded w-full"
               >
-                {loading ? 'Registering...' : 'Register'}
+                {isLoading ? 'Registering...' : 'Sign Up'}
               </button>
+              {error && <span className="text-red-500 text-center">{error}</span>}
             </Form>
           )}
         </Formik>
+
+        {/* Login Redirect */}
+        <p className="text-center text-sm text-gray-500">
+          Already have an account?{' '}
+          <a href="/login" className="text-blue-500">
+            Sign in
+          </a>
+        </p>
       </div>
     </div>
   );
 };
 
-export default Register;
+export default RegisterPage;

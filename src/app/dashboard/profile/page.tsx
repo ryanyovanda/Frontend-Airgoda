@@ -7,7 +7,7 @@ import ProfileDetailsSection from "@/app/components/profile/ProfileDetailsSectio
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
-const ProfilePage = () => {
+export default function ProfilePage() {
   const [user, setUser] = useState<{ 
     id: string;
     name?: string; 
@@ -16,7 +16,10 @@ const ProfilePage = () => {
   } | null>(null);
   
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
   const router = useRouter();
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080/api/v1";
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -35,9 +38,8 @@ const ProfilePage = () => {
         if (!userId || !accessToken) throw new Error("❌ Invalid session!");
 
         console.log(`📡 Fetching user from API: /users/${userId}`);
-        const BASE_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080/api/v1";
-
-        const res = await fetch(`${BASE_API_URL}/api/v1/users/${userId}`, {
+        
+        const res = await fetch(`${API_BASE_URL}/api/v1/users/${userId}`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -62,6 +64,33 @@ const ProfilePage = () => {
 
     fetchUser();
   }, [router]);
+
+  // ✅ Handle Password Reset Request
+  const handleResetPassword = async () => {
+    if (!user?.email) {
+      setMessage("❌ Email not found. Please try again.");
+      return;
+    }
+
+    setMessage("🔄 Sending reset email...");
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to send reset email.");
+      }
+
+      setMessage("✅ Reset email sent! Check your inbox.");
+    } catch (error) {
+      setMessage("❌ Failed to send reset email. Please try again.");
+    }
+  };
 
   if (loading) {
     return (
@@ -91,6 +120,17 @@ const ProfilePage = () => {
                 setUser((prevUser) => prevUser ? { ...prevUser, ...updatedFields } : prevUser)
               } 
             />
+
+            {/* 🔹 Reset Password Button Below Name */}
+            <div className="mt-6">
+              <button
+                onClick={handleResetPassword}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded w-full"
+              >
+                Reset Password
+              </button>
+              {message && <p className="text-center text-sm mt-2 text-red-500">{message}</p>}
+            </div>
           </div>
 
           {/* Right Section - Help Panel */}
@@ -121,6 +161,4 @@ const ProfilePage = () => {
       </Card>
     </div>
   );
-};
-
-export default ProfilePage;
+}

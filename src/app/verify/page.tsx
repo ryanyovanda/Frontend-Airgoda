@@ -52,7 +52,7 @@ const VerifyEmailPage = () => {
         setStatusMessage("success");
         alert("✅ Email successfully verified! Redirecting...");
         setTimeout(() => {
-          router.push("/profile"); // Redirect after verification
+          router.push("/dashboard/profile"); // Redirect after verification
         }, 2000);
       } catch (error) {
         console.error("🚨 Verification Error:", error);
