@@ -37,7 +37,7 @@ export default function PropertyList({ initialCategories, initialLocations }: Pr
 
   // ✅ Get params from URL
   const page = parseInt(searchParams.get("page") || "0");
-  const size = 10;
+  const size = 25;
   const searchQuery = searchParams.get("keyword") || "";
   const locationId = searchParams.get("locationId") || "";
   const categoryId = searchParams.get("categoryId") || "";

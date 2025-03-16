@@ -1,9 +1,7 @@
-// @ts-nocheck
 import NextAuth, { DefaultSession, User as NextAuthUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { jwtDecode } from "jwt-decode";
-import { jwtVerify } from "jose";
 
 interface TokenClaims {
   userId: number;
@@ -33,18 +31,6 @@ interface CustomUser extends NextAuthUser {
 }
 
 declare module "next-auth" {
-  interface Session {
-    accessToken: string;
-    refreshToken: string;
-    user: {
-      id: number;
-      email: string;
-      name: string;
-      imageUrl?: string | null;
-      roles: string[];
-      isVerified: boolean;
-    } & DefaultSession["user"];
-  }
   interface JWT {
     accessToken: {
       claims: TokenClaims;
@@ -61,6 +47,20 @@ declare module "next-auth" {
     email: string;
     isVerified?: boolean;
   }
+
+  interface Session {
+    accessToken: string;
+    refreshToken: string;
+    error?: string;
+    user: {
+      id: number;
+      email: string;
+      name: string;
+      imageUrl?: string | null;
+      roles: string[];
+      isVerified: boolean;
+    };
+  }
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -70,7 +70,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 60 * 60 * 1, // 1 hour
+    maxAge: 60 * 60 * 1,
   },
   secret: process.env.NEXTAUTH_SECRET,
   trustHost: true,
@@ -145,14 +145,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user, account }) {
       if (user) {
-        token.accessToken = user.token?.accessToken || { claims: {}, value: "" };
-        token.refreshToken = user.token?.refreshToken || { claims: {}, value: "" };
-        token.userId = user.userId;
-        token.roles = user.roles || [];
-        token.isVerified = user.isVerified;
-        token.name = user.name;
-        token.email = user.email;
-        token.imageUrl = user.imageUrl || null;
+        const customUser = user as CustomUser; // Type assertion to CustomUser
+
+        // Ensure token properties are initialized properly with default values
+        token.accessToken = customUser.token?.accessToken || { claims: {}, value: "" };
+        token.refreshToken = customUser.token?.refreshToken || { claims: {}, value: "" };
+        token.userId = customUser.userId;
+        token.roles = customUser.roles || [];
+        token.isVerified = customUser.isVerified;
+        token.name = customUser.name;
+        token.email = customUser.email;
+        token.imageUrl = customUser.imageUrl || null;
       }
 
       if (account?.provider === "google") {
@@ -191,21 +194,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     async session({ session, token }) {
-      if (!token.accessToken || !token.refreshToken) {
-        session.error = "MissingTokens";
-        return session;
-      }
+      // Ensure `accessToken` and `refreshToken` are safely accessed with fallback values
+      const accessToken = token.accessToken?.value || "";
+      const refreshToken = token.refreshToken?.value || "";
 
-      session.accessToken = token.accessToken.value;
-      session.refreshToken = token.refreshToken.value;
+      session.accessToken = accessToken;
+      session.refreshToken = refreshToken;
+
+      // Ensure session user properties are correctly populated
       session.user = {
         ...session.user,
-        id: token.userId,
-        name: token.name,
-        email: token.email,
-        imageUrl: token.imageUrl || null,
         roles: token.roles || [],
-        isVerified: token.isVerified,
+        id: token.userId || 0,
+        email: token.email || "",
+        imageUrl: token.imageUrl || "",
+        isVerified: token.isVerified || false,
       };
 
       return session;
@@ -213,9 +216,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
 });
 
-/**
- * Refresh the access token using the refresh token.
- */
 const refreshAccessToken = async (refreshToken: string) => {
   const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/refresh`;
   try {
