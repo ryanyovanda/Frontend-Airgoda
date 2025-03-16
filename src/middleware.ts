@@ -37,7 +37,8 @@ const ROLE_PATHS = {
     "/dashboard/manage-listings/[propertyId]",
     "/dashboard/manage-listings/[propertyId]/room-variant",
     "/dashboard/manage-listings/[propertyId]/room-variant/new",
-    "/dashboard/manage-listings/new"
+    "/dashboard/manage-listings/new",
+    "/verify"
   ],
   USER: [
     "/properties/[id]",
