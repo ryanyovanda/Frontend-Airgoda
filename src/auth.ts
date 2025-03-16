@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { jwtDecode } from "jwt-decode";
 
+// Define TokenClaims interface
 interface TokenClaims {
   userId: number;
   sub: string;
@@ -13,6 +14,13 @@ interface TokenClaims {
   exp?: number;
 }
 
+// Define Token interface
+interface Token {
+  accessToken?: { value: string };
+  refreshToken?: { value: string };
+}
+
+// Define CustomUser interface extending NextAuth's User
 interface CustomUser extends NextAuthUser {
   userId: number;
   imageUrl?: string | null;
@@ -30,6 +38,7 @@ interface CustomUser extends NextAuthUser {
   };
 }
 
+// Extending NextAuth's JWT and Session types
 declare module "next-auth" {
   interface JWT {
     accessToken: {
@@ -53,7 +62,7 @@ declare module "next-auth" {
     refreshToken: string;
     error?: string;
     user: {
-      id: number;
+      id: string;
       email: string;
       name: string;
       imageUrl?: string | null;
@@ -63,6 +72,7 @@ declare module "next-auth" {
   }
 }
 
+// NextAuth configuration
 export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/login",
@@ -78,6 +88,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: { scope: "openid email profile" },
+      },
       async profile(profile) {
         return {
           id: profile.sub,
@@ -93,6 +106,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         };
       },
     }),
+    
 
     CredentialsProvider({
       name: "credentials",
@@ -145,9 +159,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user, account }) {
       if (user) {
-        const customUser = user as CustomUser; // Type assertion to CustomUser
-
-        // Ensure token properties are initialized properly with default values
+        const customUser = user as CustomUser;
+    
         token.accessToken = customUser.token?.accessToken || { claims: {}, value: "" };
         token.refreshToken = customUser.token?.refreshToken || { claims: {}, value: "" };
         token.userId = customUser.userId;
@@ -157,8 +170,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.email = customUser.email;
         token.imageUrl = customUser.imageUrl || null;
       }
-
-      if (account?.provider === "google") {
+    
+      // ✅ Only run this if `account` is available
+      if (account && account.provider === "google") {
         try {
           const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/google-login`;
           const response = await fetch(url, {
@@ -166,54 +180,57 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token: account.id_token }),
           });
-
-          if (!response.ok) throw new Error("Failed to authenticate with backend");
-
+    
+          if (!response.ok) {
+            throw new Error("Failed to authenticate with backend");
+          }
+    
           const { data } = await response.json();
-          if (!data?.accessToken) throw new Error("No access token received from backend");
-
-          const decodedToken = jwtDecode<TokenClaims>(data.accessToken);
+          const decodedAccessToken = jwtDecode<TokenClaims>(data.accessToken);
+          const decodedRefreshToken = jwtDecode<TokenClaims>(data.refreshToken);
+    
           token.accessToken = {
-            claims: decodedToken,
+            claims: decodedAccessToken,
             value: data.accessToken,
           };
           token.refreshToken = {
-            claims: jwtDecode<TokenClaims>(data.refreshToken),
+            claims: decodedRefreshToken,
             value: data.refreshToken,
           };
-          token.userId = data.user?.id || decodedToken.userId || 0;
-          token.roles = decodedToken.scope ? decodedToken.scope.split(" ") : [];
-          token.isVerified = data.user?.isVerified ?? true;
-          token.name = data.user?.name || decodedToken.name;
-          token.email = data.user?.email || decodedToken.sub || "";
-          token.imageUrl = data.user?.imageUrl || decodedToken.imageUrl || null;
-        } catch (error) {}
+          token.userId = data.user?.id ?? decodedAccessToken.userId ?? 0;
+          token.roles = data.user?.roles ?? (decodedAccessToken.scope ? decodedAccessToken.scope.split(" ") : []);
+          token.isVerified = data.user?.isVerified ?? decodedAccessToken.isVerified ?? false;
+          token.name = data.user?.name ?? decodedAccessToken.name ?? "Unknown";
+          token.email = data.user?.email ?? decodedAccessToken.sub ?? "";
+          token.imageUrl = data.user?.imageUrl ?? decodedAccessToken.imageUrl ?? null;
+    
+        } catch (error) {
+          console.error("Google Login Backend Error:", error);
+        }
       }
-
+    
       return token;
     },
-
+    
+  
     async session({ session, token }) {
-      // Ensure `accessToken` and `refreshToken` are safely accessed with fallback values
-      const accessToken = token.accessToken?.value || "";
-      const refreshToken = token.refreshToken?.value || "";
-
-      session.accessToken = accessToken;
-      session.refreshToken = refreshToken;
-
-      // Ensure session user properties are correctly populated
+      session.accessToken = (token.accessToken as { value: string }).value || "";
+      session.refreshToken = (token.refreshToken as { value: string }).value || "";
+  
       session.user = {
-        ...session.user,
-        roles: token.roles || [],
-        id: token.userId || 0,
+        id: String(token.userId),
         email: token.email || "",
-        imageUrl: token.imageUrl || "",
-        isVerified: token.isVerified || false,
+        name: token.name || "",
+        imageUrl: typeof token.imageUrl === "string" ? token.imageUrl : "",
+        roles: Array.isArray(token.roles) ? token.roles : [],
+        isVerified: typeof token.isVerified === "boolean" ? token.isVerified : false,
+        emailVerified: false as unknown as Date,  
       };
-
+  
       return session;
     },
   },
+  
 });
 
 const refreshAccessToken = async (refreshToken: string) => {
