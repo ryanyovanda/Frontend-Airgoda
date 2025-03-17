@@ -65,33 +65,6 @@ export default function ProfilePage() {
     fetchUser();
   }, [router]);
 
-  // ✅ Handle Password Reset Request
-  const handleResetPassword = async () => {
-    if (!user?.email) {
-      setMessage("❌ Email not found. Please try again.");
-      return;
-    }
-
-    setMessage("🔄 Sending reset email...");
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to send reset email.");
-      }
-
-      setMessage("✅ Reset email sent! Check your inbox.");
-    } catch (error) {
-      setMessage("❌ Failed to send reset email. Please try again.");
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -120,17 +93,6 @@ export default function ProfilePage() {
                 setUser((prevUser) => prevUser ? { ...prevUser, ...updatedFields } : prevUser)
               } 
             />
-
-            {/* 🔹 Reset Password Button Below Name */}
-            <div className="mt-6">
-              <button
-                onClick={handleResetPassword}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded w-full"
-              >
-                Reset Password
-              </button>
-              {message && <p className="text-center text-sm mt-2 text-red-500">{message}</p>}
-            </div>
           </div>
 
           {/* Right Section - Help Panel */}

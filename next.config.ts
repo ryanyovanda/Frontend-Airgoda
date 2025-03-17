@@ -4,9 +4,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true, // ✅ Enables React Strict Mode
   swcMinify: true, // ✅ Enables SWC minification for better performance
-  
 
   images: {
+    domains: ["res.cloudinary.com"], // ✅ Allow Cloudinary images
     remotePatterns: [
       {
         protocol: "https",

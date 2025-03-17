@@ -5,12 +5,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { getSession } from "next-auth/react";
+import { Button } from "@/components/ui/button"; // ✅ Using shadcn
+import { Input } from "@/components/ui/input"; // ✅ Using shadcn
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImageIcon, CheckCircle, XCircle, RefreshCcw, Lock } from "lucide-react"; // ✅ Icon library
+
 
 interface User {
   id: string;
   name?: string;
   email?: string;
   isVerified?: boolean;
+  imageUrl?: string;
 }
 
 interface ProfileDetailsProps {
@@ -18,153 +24,237 @@ interface ProfileDetailsProps {
   setUser: (updatedUser: Partial<User>) => void;
 }
 
-const profileSchema = z.object({
+const nameSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
 });
 
 const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser }) => {
-  const [emailSent, setEmailSent] = useState(false);
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      name: user.name || "",
-    },
+  const [profileImage, setProfileImage] = useState<string | null>(user.imageUrl || null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
+
+
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm({
+    resolver: zodResolver(nameSchema),
+    defaultValues: { name: user.name || "" },
   });
 
-  // ✅ Sync form values with user prop updates
+  const BASE_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080/api/v1";
+
+  // ✅ Fetch profile image from session
+  useEffect(() => {
+    getSession().then((session) => {
+      if (session && session.user) {
+        setProfileImage(session.user.imageUrl || null);
+      }
+    });
+  }, []);
+
+  // ✅ Sync form values with user updates
   useEffect(() => {
     setValue("name", user.name || "");
   }, [user.name, setValue]);
 
-  const onSubmit = async (data: { name: string }) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        alert("❌ Only image files are allowed.");
+        return;
+      }
+      if (file.size > 1024 * 1024) {
+        alert("❌ File size must be less than 1MB.");
+        return;
+      }
+      setSelectedFile(file);
+      setProfileImage(URL.createObjectURL(file)); // Temporary preview
+    }
+  };
+
+  // ✅ Save All Changes (Name & Profile Picture)
+  const saveChanges = async (data: { name: string }) => {
+    setIsUpdating(true);
     try {
       const session = await getSession();
       if (!session || !session.accessToken) {
         throw new Error("❌ User session expired. Please log in again.");
       }
 
-      const BASE_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080/api/v1";
+      // 1️⃣ Upload Profile Picture (if selected)
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
 
-      // ✅ Ensure ID is retained
-      const payload = { id: user.id, name: data.name };
+        const uploadResponse = await fetch(`${BASE_API_URL}/api/v1/users/${user.id}/profile-image`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+          body: formData,
+        });
 
-      console.log("📡 Sending update request with payload:", JSON.stringify(payload));
+        if (!uploadResponse.ok) {
+          throw new Error("❌ Failed to upload profile picture");
+        }
+        const newImageUrl = await uploadResponse.text();
+        setProfileImage(newImageUrl);
+        setUser({ ...user, imageUrl: newImageUrl });
+      }
 
-      const response = await fetch(`${BASE_API_URL}/api/v1/users/profile`, {
+      // 2️⃣ Update Name
+      const nameResponse = await fetch(`${BASE_API_URL}/api/v1/users/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session.accessToken}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ name: data.name }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("❌ Server responded with error:", errorData);
-        throw new Error(errorData.message || "Failed to update profile");
+      if (!nameResponse.ok) {
+        throw new Error("❌ Failed to update name");
       }
 
+      setUser({ ...user, name: data.name });
       alert("✅ Profile updated successfully!");
-      setUser({ ...user, name: data.name }); // ✅ Keeps other properties intact
-    } catch (error: any) {
-      alert(error.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      console.error("🚨 Error updating profile:", error);
+      alert("Something went wrong.");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const sendVerificationEmail = async () => {
+  // ✅ Resend Verification Email
+  const resendVerificationEmail = async () => {
+    setIsResendingVerification(true);
     try {
-      if (!user.email) {
-        alert("❌ No email found in user data!");
-        return;
+      const session = await getSession();
+      if (!session || !session.accessToken || !session.user?.email) {
+        throw new Error("❌ User session expired or email not found. Please log in again.");
       }
-
-      const BASE_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080/api/v1";
-
+  
       const response = await fetch(`${BASE_API_URL}/api/v1/users/resend-verification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({ email: session.user.email }),
+      });
+  
+      if (!response.ok) {
+        throw new Error("❌ Failed to resend verification email");
+      }
+  
+      alert("✅ Verification email sent successfully!");
+    } catch (error) {
+      console.error("🚨 Error resending verification email:", error);
+      alert("Something went wrong.");
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
+  
+  const handleResetPassword = async () => {
+    if (!user?.email) {
+      setResetMessage("❌ Email not found. Please try again.");
+      return;
+    }
+
+    setResetMessage("🔄 Sending reset email...");
+
+    try {
+      const response = await fetch(`${BASE_API_URL}/api/v1/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: user.email }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to send verification email");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to send reset email.");
       }
 
-      setEmailSent(true);
-      alert("✅ Verification email sent. Check your inbox!");
+      setResetMessage("✅ Reset email sent! Check your inbox.");
     } catch (error) {
-      console.error("🚨 Error sending verification email:", error);
+      setResetMessage("❌ Failed to send reset email. Please try again.");
     }
   };
 
+
   return (
-    <div className="bg-white p-6 shadow rounded-lg max-w-3xl mx-auto">
-      <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
+    <Card className="max-w-3xl mx-auto p-6 shadow-lg border rounded-lg">
+      <CardHeader>
+        <CardTitle className="text-xl font-bold text-center">Profile Settings</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* ✅ Profile Picture */}
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-32 h-40 border border-gray-300 shadow-md overflow-hidden rounded-lg bg-gray-100">
+            {profileImage ? (
+              <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <ImageIcon className="text-gray-500 w-full h-full p-6" />
+            )}
+          </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Name Field */}
-        <div>
-          <label htmlFor="name" className="block text-gray-600">
-            Name
+          <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" id="fileUpload" />
+          <label htmlFor="fileUpload" className="text-sm font-medium text-blue-600 hover:underline cursor-pointer">
+            {profileImage ? "Change Picture" : "Upload Picture"}
           </label>
-          <input
-            id="name"
-            {...register("name")}
-            className="w-full px-4 py-2 border rounded-md"
-          />
-          {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
         </div>
 
-        {/* Email Field (Read-Only) */}
-        <div>
-          <label htmlFor="email" className="block text-gray-600">
-            Email
-          </label>
-          <input
-            id="email"
-            value={user.email || ""}
-            disabled
-            className="w-full px-4 py-2 border rounded-md bg-gray-100 cursor-not-allowed"
-          />
-        </div>
+        {/* ✅ Email & Verification */}
+        
 
-        {/* Update Button */}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:bg-gray-400"
-        >
-          {isSubmitting ? "Updating..." : "Update Profile"}
-        </button>
-      </form>
+<div className="flex items-center justify-between">
+  <div className="flex items-center space-x-2">
+    <p className="text-gray-600">
+      Email: <span className="font-semibold">{user.email}</span>
+    </p>
+    {user.isVerified ? (
+      <CheckCircle className="text-green-500" size={20} />
+    ) : (
+      <XCircle className="text-red-500" size={20} />
+    )}
+  </div>
+  {!user.isVerified && (
+    <Button
+      onClick={resendVerificationEmail}
+      disabled={isResendingVerification}
+      size="sm"
+      variant="outline"
+    >
+      <RefreshCcw className="mr-2" /> {isResendingVerification ? "Sending..." : "Resend Verification"}
+    </Button>
+  )}
+</div>
 
-      {/* ✅ Email Verification Section */}
-      <div className="mt-6 p-4 border rounded-lg shadow-md">
-        <h2 className="text-lg font-semibold">Email Verification</h2>
-        {user.isVerified ? (
-          <p className="text-green-600">✅ Verified</p>
-        ) : (
-          <p className="text-red-500">❌ Not Verified</p>
-        )}
 
-        {!user.isVerified && !emailSent && (
-          <button
-            onClick={sendVerificationEmail}
-            className="text-blue-600 text-sm font-medium hover:underline mt-2"
-          >
-            Send Verification Email
-          </button>
-        )}
+        {/* ✅ Change Name */}
+        <form onSubmit={handleSubmit(saveChanges)} className="space-y-4">
+          <div>
+            <label className="block text-gray-600">Name</label>
+            <Input {...register("name")} />
+            {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
+          </div>
+          <Button type="submit" disabled={isUpdating} className="w-full">
+            {isUpdating ? "Saving..." : "Save Changes"}
+          </Button>
+        </form>
 
-        {emailSent && <p className="text-blue-500 mt-2">📩 Verification email sent!</p>}
-      </div>
-    </div>
+
+        <form onSubmit={handleSubmit(saveChanges)} className="space-y-4">
+          <Button variant="outline" onClick={handleResetPassword}>
+            <Lock className="mr-2" /> Reset Password
+          </Button>
+          {resetMessage && <p className="text-center text-sm mt-2 text-red-500">{resetMessage}</p>}
+        </form>
+
+      </CardContent>
+    </Card>
   );
 };
 

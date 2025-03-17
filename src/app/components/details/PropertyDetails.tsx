@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
-import { Dialog, DialogTrigger, DialogContent, DialogClose } from "@/components/ui/dialog";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Pagination } from "swiper/modules";
 import BookingForm from "@/app/components/forms/BookingForm";
 import PriceCalendar from "../pricecalender/PriceCalender";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 
 interface RoomVariant {
   id: number;
@@ -28,7 +32,7 @@ interface PropertyDetailsProps {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
-  const { propertyId } = useParams(); 
+  const { propertyId } = useParams();
   const [roomVariants, setRoomVariants] = useState<RoomVariant[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<RoomVariant | null>(null);
 
@@ -56,67 +60,36 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
   const locationText = data.location?.name || "Location unavailable";
 
   return (
-    <div className="max-w-7xl mx-auto p-6 flex gap-10 sm:flex-col lg:flex-row ">
-      {/* LEFT SIDE: Images & Details */}
-      <div className="lg:w-2/3 sm:w-full">
-        <div className="grid grid-cols-4 gap-2">
-          {data.imageUrls && data.imageUrls.length > 0 ? (
-            <>
-              <Dialog>
-                <DialogTrigger className="col-span-2 relative h-[400px]">
-                  <Image
-                    src={data.imageUrls[0]}
-                    alt="Main Property Image"
-                    fill
-                    className="rounded-lg object-cover cursor-pointer"
-                  />
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl p-4">
-                  <Image
-                    src={data.imageUrls[0]}
-                    alt="Enlarged Property Image"
-                    width={1000}
-                    height={700}
-                    className="rounded-lg object-cover"
-                  />
-                  <DialogClose className="absolute top-2 right-2 bg-gray-800 text-white px-3 py-1 rounded-md">
-                    Close
-                  </DialogClose>
-                </DialogContent>
-              </Dialog>
-              {data.imageUrls.slice(1, 4).map((url, index) => (
-                <Dialog key={index}>
-                  <DialogTrigger className="relative h-[200px]">
-                    <Image
-                      src={url}
-                      alt={`Property Image ${index + 1}`}
-                      fill
-                      className="rounded-lg object-cover cursor-pointer"
-                    />
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl p-4">
-                    <Image
-                      src={url}
-                      alt="Enlarged Property Image"
-                      width={1000}
-                      height={700}
-                      className="rounded-lg object-cover"
-                    />
-                    <DialogClose className="absolute top-2 right-2 bg-gray-800 text-white px-3 py-1 rounded-md">
-                      Close
-                    </DialogClose>
-                  </DialogContent>
-                </Dialog>
-              ))}
-            </>
-          ) : (
-            <div className="w-full h-[400px] bg-gray-300 flex items-center justify-center rounded-lg">
-              <span className="text-gray-500">No Images Available</span>
-            </div>
-          )}
-        </div>
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 flex flex-col lg:flex-row gap-8">
+      {/* LEFT SIDE: Swiper for Images & Details */}
+      <div className="lg:w-2/3 w-full">
+        {data.imageUrls && data.imageUrls.length > 0 ? (
+          <Swiper
+            modules={[Navigation, Pagination]}
+            navigation
+            pagination={{ clickable: true }}
+            spaceBetween={10}
+            slidesPerView={1}
+            className="w-full h-[300px] sm:h-[400px] rounded-lg shadow-lg"
+          >
+            {data.imageUrls.map((url, index) => (
+              <SwiperSlide key={index} className="relative h-full">
+                <Image
+                  src={url}
+                  alt={`Property Image ${index + 1}`}
+                  fill
+                  className="rounded-lg object-cover"
+                />
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        ) : (
+          <div className="w-full h-[300px] bg-gray-300 flex items-center justify-center rounded-lg">
+            <span className="text-gray-500">No Images Available</span>
+          </div>
+        )}
 
-        <h1 className="text-4xl font-bold mt-4">{data.name}</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold mt-4">{data.name}</h1>
         <p className="text-lg text-gray-500 mt-1">{locationText}</p>
         <p className="mt-4 text-lg">{data.description}</p>
 
@@ -132,7 +105,7 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
                 }`}
                 onClick={() => setSelectedRoom(room)}
               >
-                <span className="text-xl font-semibold">{room.name}</span>
+                <span className="text-lg sm:text-xl font-semibold">{room.name}</span>
                 {/* Facilities List */}
                 {room.facilities && room.facilities.length > 0 ? (
                   <ul className="text-gray-600 mt-2 list-disc pl-5 text-lg">
@@ -162,8 +135,8 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
       </div>
 
       {/* Floating Booking Form */}
-      <div className="lg:w-1/3 sm:w-full">
-        <div className="sticky top-20 border p-6 rounded-lg shadow-lg bg-white">
+      <div className="lg:w-1/3 w-full">
+        <div className="sticky top-20 border p-4 sm:p-6 rounded-lg shadow-lg bg-white">
           <BookingForm propertyId={data.id} roomVariants={roomVariants} />
         </div>
       </div>
