@@ -3,8 +3,8 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
-import Navbar from "@/app/components/navbar";
-import Footer from "@/app/components/footer";
+import Navbar from "@/app/components/NavBar";
+import Footer from "@/app/components/Footer";
 
 
 
@@ -28,14 +28,14 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const session = await auth(); // Fetch session
+  const session = await auth(); 
 
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <SessionProvider refetchInterval={120} session={session}>
           <Navbar /> 
-          <main>{children}</main> {/* Wraps page content */}
+          <main>{children}</main>
           <Footer />
         </SessionProvider>
       </body>

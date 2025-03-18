@@ -5,8 +5,8 @@ import Image from "next/image";
 import { useParams } from "next/navigation";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
-import BookingForm from "@/app/components/forms/BookingForm";
-import PriceCalendar from "../pricecalender/PriceCalender";
+import BookingForm from "../BookingForm";
+import PriceCalendar from "../PriceCalender/PriceCalender";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -61,7 +61,6 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 flex flex-col lg:flex-row gap-8">
-      {/* LEFT SIDE: Swiper for Images & Details */}
       <div className="lg:w-2/3 w-full">
         {data.imageUrls && data.imageUrls.length > 0 ? (
           <Swiper
@@ -93,7 +92,6 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
         <p className="text-lg text-gray-500 mt-1">{locationText}</p>
         <p className="mt-4 text-lg">{data.description}</p>
 
-        {/* Available Rooms Section */}
         <h2 className="text-2xl font-semibold mt-6">Available Rooms</h2>
         <ul className="mt-3 space-y-4">
           {roomVariants.length > 0 ? (
@@ -106,7 +104,6 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
                 onClick={() => setSelectedRoom(room)}
               >
                 <span className="text-lg sm:text-xl font-semibold">{room.name}</span>
-                {/* Facilities List */}
                 {room.facilities && room.facilities.length > 0 ? (
                   <ul className="text-gray-600 mt-2 list-disc pl-5 text-lg">
                     {room.facilities.map((facility, index) => (
@@ -123,18 +120,15 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
           )}
         </ul>
 
-        {/* Calendar Section */}
         <h2 className="text-2xl font-semibold mt-6">Check Rooms Price</h2>
         <PriceCalendar propertyId={data.id} selectedRoomVariant={selectedRoom?.id ?? null} />
 
-        {/* Price Notes */}
         <div className="mt-3 text-lg text-gray-600">
           <p><span className="text-orange-500 font-semibold">Orange:</span> Peak Rate Price</p>
           <p><span className="text-green-600 font-semibold">Green:</span> Normal Price</p>
         </div>
       </div>
 
-      {/* Floating Booking Form */}
       <div className="lg:w-1/3 w-full">
         <div className="sticky top-20 border p-4 sm:p-6 rounded-lg shadow-lg bg-white">
           <BookingForm propertyId={data.id} roomVariants={roomVariants} />

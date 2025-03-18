@@ -3,7 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { jwtDecode } from "jwt-decode";
 
-// Define TokenClaims interface
+
 interface TokenClaims {
   userId: number;
   sub: string;
@@ -14,13 +14,12 @@ interface TokenClaims {
   exp?: number;
 }
 
-// Define Token interface
 interface Token {
   accessToken?: { value: string };
   refreshToken?: { value: string };
 }
 
-// Define CustomUser interface extending NextAuth's User
+
 interface CustomUser extends NextAuthUser {
   userId: number;
   imageUrl?: string | null;
@@ -38,7 +37,6 @@ interface CustomUser extends NextAuthUser {
   };
 }
 
-// Extending NextAuth's JWT and Session types
 declare module "next-auth" {
   interface JWT {
     accessToken: {
@@ -72,7 +70,6 @@ declare module "next-auth" {
   }
 }
 
-// NextAuth configuration
 export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/login",
@@ -171,7 +168,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.imageUrl = customUser.imageUrl || null;
       }
     
-      // ✅ Only run this if `account` is available
+
       if (account && account.provider === "google") {
         try {
           const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/google-login`;

@@ -5,7 +5,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useRouter } from 'next/navigation';
 
-// Define TypeScript Interface for Form Values
+
 interface RegisterFormValues {
   email: string;
   password: string;
@@ -47,8 +47,13 @@ const RegisterPage: FC = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed');
+      if (response.status === 400 && errorData.message.includes("email_unique")) {
+        throw new Error("This email is already registered. Please use a different email.");
       }
+
+      throw new Error(errorData.message || 'Registration failed');
+    }
+
 
       alert('Registration successful! Redirecting to login...');
       router.push('/login');
@@ -68,7 +73,6 @@ const RegisterPage: FC = () => {
           Sign up for free and start enjoying amazing deals and benefits!
         </p>
 
-        {/* Formik Form for Registration */}
         <Formik
           initialValues={{ email: '', password: '', confirmPassword: '' }}
           validationSchema={validationSchema}
@@ -119,7 +123,6 @@ const RegisterPage: FC = () => {
           )}
         </Formik>
 
-        {/* Login Redirect */}
         <p className="text-center text-sm text-gray-500">
           Already have an account?{' '}
           <a href="/login" className="text-blue-500">

@@ -16,7 +16,7 @@ export async function fetchData(
     });
 
     if (res.status === 401) {
-      // ✅ Attempt to refresh token
+      
       const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

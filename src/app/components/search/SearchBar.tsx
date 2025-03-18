@@ -9,23 +9,23 @@ const SearchBar = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // ✅ Extract search query from URL
+  
   const [searchQuery, setSearchQuery] = useState(searchParams.get("keyword") || "");
 
   useEffect(() => {
-    // ✅ Keep the search bar updated with the current URL
+   
     setSearchQuery(searchParams.get("keyword") || "");
   }, [searchParams]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // ✅ Preserve existing filters (categoryId, locationId, page)
+    
     const params = new URLSearchParams(searchParams.toString());
     
     if (searchQuery.trim()) {
       params.set("keyword", searchQuery);
-      params.set("page", "0"); // Reset pagination when searching
+      params.set("page", "0");
     } else {
       params.delete("keyword");
     }

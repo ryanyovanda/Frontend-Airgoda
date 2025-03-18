@@ -32,7 +32,7 @@ const PriceCalendar: React.FC<PriceCalendarProps> = ({ propertyId, selectedRoomV
   useEffect(() => {
     if (selectedRoomVariant) {
       fetchRoomPrice(selectedRoomVariant);
-      fetchPeakRates(selectedRoomVariant); // ✅ Fetch only relevant peak rates
+      fetchPeakRates(selectedRoomVariant); 
     }
   }, [selectedRoomVariant]);
   
@@ -60,7 +60,6 @@ const PriceCalendar: React.FC<PriceCalendarProps> = ({ propertyId, selectedRoomV
   
       const allPeakRates = await response.json();
   
-      // ✅ Filter peak rates for the selected room variant
       const filteredPeakRates = allPeakRates.filter((rate: PeakRate) => rate.roomVariantId === roomId);
   
       setPeakRates(filteredPeakRates);
@@ -84,7 +83,6 @@ const PriceCalendar: React.FC<PriceCalendarProps> = ({ propertyId, selectedRoomV
       price += peakRate.additionalPrice;
     }
 
-    // ✅ FIX PRICE DISPLAY: Always divide by 1000
     const formattedPrice = Math.floor(price / 1000);
     return { price: formattedPrice, isPeakRate: !!peakRate };
   };

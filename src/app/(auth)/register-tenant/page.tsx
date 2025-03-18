@@ -5,7 +5,6 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useRouter } from 'next/navigation';
 
-// Define TypeScript Interface for Form Values
 interface RegisterFormValues {
   email: string;
   password: string;
@@ -68,7 +67,6 @@ const RegisterTenantPage: FC = () => {
           Sign up for free and start enjoying amazing deals and benefits!
         </p>
 
-        {/* Formik Form for Registration */}
         <Formik
           initialValues={{ email: '', password: '', confirmPassword: '' }}
           validationSchema={validationSchema}
@@ -119,7 +117,6 @@ const RegisterTenantPage: FC = () => {
           )}
         </Formik>
 
-        {/* Login Redirect */}
         <p className="text-center text-sm text-gray-500">
           Already have an account?{' '}
           <a href="/login" className="text-blue-500">

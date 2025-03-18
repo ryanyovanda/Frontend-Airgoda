@@ -7,7 +7,7 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 import Image from "next/image";
 
-// Define a type for slide objects
+
 interface Slide {
   id: number;
   image: string;

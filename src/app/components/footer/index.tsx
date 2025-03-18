@@ -18,14 +18,11 @@ const Footer = () => {
   return (
     <footer className="bg-[#4B0082] text-white py-8">
       <div className="container mx-auto px-6 md:px-12">
-        {/* Top Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-          {/* Logo */}
           <div className="mb-6 md:mb-0">
             <Image src="/logo.png" alt="Brand Logo" width={150} height={50} />
           </div>
 
-          {/* Links */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
             <div>
               <h3 className="font-bold mb-2">Company</h3>
@@ -47,7 +44,6 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Newsletter Signup */}
         <div className="border-t border-gray-400 pt-6 flex flex-col md:flex-row justify-between items-center">
           <div className="mb-4 md:mb-0">
             <h3 className="text-lg font-bold">Get the latest updates</h3>
@@ -66,7 +62,6 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Social Media Icons */}
         <div className="flex justify-center space-x-4 mt-6">
           <FontAwesomeIcon icon={faFacebookF} className="text-white w-6 h-6 cursor-pointer hover:opacity-75" />
           <FontAwesomeIcon icon={faInstagram} className="text-white w-6 h-6 cursor-pointer hover:opacity-75" />
@@ -75,7 +70,7 @@ const Footer = () => {
           <FontAwesomeIcon icon={faYoutube} className="text-white w-6 h-6 cursor-pointer hover:opacity-75" />
         </div>
 
-        {/* Bottom Section */}
+
         <div className="text-center text-xs text-gray-300 mt-6">
           <p>© {new Date().getFullYear()} YourCompany. All rights reserved.</p>
           <div className="flex justify-center space-x-4 mt-2">

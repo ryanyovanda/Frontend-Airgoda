@@ -2,11 +2,11 @@ import type { NextConfig } from "next";
 
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
-  reactStrictMode: true, // ✅ Enables React Strict Mode
-  swcMinify: true, // ✅ Enables SWC minification for better performance
+  reactStrictMode: true, 
+  swcMinify: true,
 
   images: {
-    domains: ["res.cloudinary.com"], // ✅ Allow Cloudinary images
+    domains: ["res.cloudinary.com"], 
     remotePatterns: [
       {
         protocol: "https",
@@ -16,11 +16,11 @@ const nextConfig: NextConfig = {
   },
 
   eslint: {
-    ignoreDuringBuilds: true, // ✅ Disables ESLint during builds
+    ignoreDuringBuilds: true,
   },
 
   env: {
-    NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL, // ✅ Allows env variable in client
+    NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL, 
   },
 };
 
