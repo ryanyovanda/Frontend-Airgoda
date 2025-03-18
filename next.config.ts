@@ -1,27 +1,26 @@
 import type { NextConfig } from "next";
-import path from "node:path";
 
+/** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: true, // ✅ Enables React Strict Mode
+  swcMinify: true, // ✅ Enables SWC minification for better performance
 
   images: {
-    domains: ["res.cloudinary.com"],
+    domains: ["res.cloudinary.com"], // ✅ Allow Cloudinary images
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
+    ],
   },
 
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: true, // ✅ Disables ESLint during builds
   },
 
   env: {
-    NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL,
-  },
-
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      "@": path.join(process.cwd(), "src"), // ✅ Use `path.join` instead of `path.resolve`
-    };
-    return config;
+    NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL, // ✅ Allows env variable in client
   },
 };
 
