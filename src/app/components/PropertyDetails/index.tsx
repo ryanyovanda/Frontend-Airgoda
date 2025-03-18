@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
 import BookingForm from "../BookingForm";
-import PriceCalendar from "../PriceCalender/PriceCalender";
+import PriceCalendar from "@/app/components/PriceCalender";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
