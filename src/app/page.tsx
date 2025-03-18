@@ -1,6 +1,6 @@
 import PropertyList from "@/app/components/PropertyList";
 import HeroSlideshow from "@/app/components/HeroSlideShow";
-import SearchBar from "@/app/components/SearchBar/SearchBar";
+import SearchBar from "@/app/components/SearchBar";
 import EmailVerificationNotice from "@/app/components/EmailVerificationNotice";
 import axios from "axios";
 
