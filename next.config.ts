@@ -1,11 +1,11 @@
 import type { NextConfig } from "next";
-import path from "node:path"; 
+import path from "node:path";
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true, 
+  reactStrictMode: true,
 
   images: {
-    domains: ["res.cloudinary.com"], 
+    domains: ["res.cloudinary.com"],
   },
 
   eslint: {
@@ -13,13 +13,13 @@ const nextConfig: NextConfig = {
   },
 
   env: {
-    NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL, 
+    NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL,
   },
 
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      "@": path.resolve(process.cwd(), "src"), // ✅ Fix for Vercel builds
+      "@": path.join(process.cwd(), "src"), // ✅ Use `path.join` instead of `path.resolve`
     };
     return config;
   },
