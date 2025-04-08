@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 import axios from "axios";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
@@ -14,6 +15,7 @@ export default function AddRoomVariant() {
     const params = useParams(); 
     const router = useRouter();
     const propertyId = Number(params.propertyId); 
+    const { data: session } = useSession();
 
     const [formData, setFormData] = useState({
         name: "",
@@ -58,28 +60,44 @@ export default function AddRoomVariant() {
         }));
     };
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setLoading(true);
+    
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
 
-        const payload = {
-            ...formData,
-            price: Number(formData.price),
-            maxGuest: Number(formData.maxGuest),
-            capacity: Number(formData.capacity),
-            propertyId,
-        };
+    if (!session?.accessToken) {
+        toast.error("You must be logged in to perform this action.");
+        setLoading(false);
+        return;
+    }
 
-        try {
-            await axios.post(`${API_BASE_URL}/api/room-variants`, payload);
-            toast.success("Room variant added successfully!");
-            router.push(`/dashboard/manage-listings/${propertyId}/room-variant`);
-        } catch (error) {
-            toast.error("Failed to add room variant.");
-        } finally {
-            setLoading(false);
-        }
+    const payload = {
+        ...formData,
+        price: Number(formData.price),
+        maxGuest: Number(formData.maxGuest),
+        capacity: Number(formData.capacity),
+        propertyId,
     };
+
+    try {
+        const response = await axios.post(
+            `${API_BASE_URL}/api/room-variants`,
+            payload,
+            {
+                headers: {
+                    Authorization: `Bearer ${session.accessToken}`,
+                },
+            }
+        );
+        toast.success("Room variant added successfully!");
+        router.push(`/dashboard/manage-listings/${propertyId}/room-variant`);
+    } catch (error: any) {
+        console.error("Detailed error response:", error.response.data);
+        toast.error(`Failed to add room variant: ${error.response?.data?.message || error.message}`);
+    } finally {
+        setLoading(false);
+    }
+};
 
     return (
         <div className="max-w-lg mx-auto p-6 bg-white shadow-md rounded-lg mt-6">

@@ -24,6 +24,7 @@ interface PropertyDetailsProps {
     id: number;
     name: string;
     description: string;
+    fullAddress: string;
     location?: { name?: string };
     imageUrls?: string[];
   };
@@ -94,6 +95,7 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({ data }) => {
 
         <h1 className="text-3xl sm:text-4xl font-bold mt-4">{data.name}</h1>
         <p className="text-lg text-gray-500 mt-1">{locationText}</p>
+        <p className="mt-4 text-lg">{data.fullAddress}</p>
         <p className="mt-4 text-lg">{data.description}</p>
         <h2 className="text-2xl font-semibold mt-6">Available Rooms</h2>
         <ul className="mt-3 space-y-4">

@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner"; 
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
 import { PlusCircle, Loader2 } from "lucide-react";
+import axios from "axios";
+import { useSession } from "next-auth/react";
 
 interface RoomVariant {
   id: number;
@@ -29,6 +31,8 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:808
 const EditRoomVariant = () => {
   const { roomVariantId, propertyId } = useParams();
   const router = useRouter();
+  const { data: session } = useSession();
+
   const [roomVariant, setRoomVariant] = useState<RoomVariant | null>(null);
   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
   const [customFacility, setCustomFacility] = useState<string>("");
@@ -37,23 +41,25 @@ const EditRoomVariant = () => {
 
   useEffect(() => {
     fetchRoomVariant();
-  }, []);
+  }, [roomVariantId]);
 
   const fetchRoomVariant = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/room-variants/${roomVariantId}`);
-      if (!response.ok) throw new Error("Failed to fetch room variant");
-
-      const data: RoomVariant = await response.json();
-      setRoomVariant(data);
-      setSelectedFacilities(data.facilities);
+      const response = await axios.get(`${BACKEND_URL}/api/room-variants/${roomVariantId}`);
+      setRoomVariant(response.data);
+      setSelectedFacilities(response.data.facilities);
     } catch (error) {
-      console.error("Error fetching room variant:", error);
+      toast.error("Failed to fetch room variant");
+      console.error(error);
     }
   };
 
   const handleUpdate = async () => {
-    if (!roomVariant) return;
+    if (!roomVariant || !session?.accessToken) {
+      toast.error("Authentication error or missing data.");
+      return;
+    }
+
     setLoading(true);
 
     const updatedData = {
@@ -62,18 +68,14 @@ const EditRoomVariant = () => {
     };
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/room-variants/${roomVariantId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedData),
+      await axios.put(`${BACKEND_URL}/api/room-variants/${roomVariantId}`, updatedData, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
       });
-
-      if (!response.ok) throw new Error("Failed to update room variant");
 
       toast.success("Room variant updated successfully!");
       router.push(`/dashboard/manage-listings/${propertyId}`);
-    } catch (error) {
-      console.error("Error updating room variant:", error);
+    } catch (error: any) {
+      console.error(error);
       toast.error("Failed to update room variant");
     } finally {
       setLoading(false);
@@ -112,21 +114,18 @@ const EditRoomVariant = () => {
               value={roomVariant.name}
               onChange={(e) => setRoomVariant({ ...roomVariant, name: e.target.value })}
             />
-
             <Input
               placeholder="Price"
               type="number"
               value={roomVariant.price}
               onChange={(e) => setRoomVariant({ ...roomVariant, price: parseInt(e.target.value) })}
             />
-
             <Input
               placeholder="Max Guests"
               type="number"
               value={roomVariant.maxGuest}
               onChange={(e) => setRoomVariant({ ...roomVariant, maxGuest: parseInt(e.target.value) })}
             />
-
             <Input
               placeholder="Capacity"
               type="number"
@@ -150,24 +149,22 @@ const EditRoomVariant = () => {
                 ))}
               </div>
             </div>
+
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" className="mt-2 flex items-center gap-2">
-                  <PlusCircle size={18} />
-                  Add Custom Facility
+                  <PlusCircle size={18} /> Add Custom Facility
                 </Button>
               </DialogTrigger>
               <DialogContent>
-                <div className="p-4 space-y-4">
-                  <Input
-                    placeholder="Enter new facility"
-                    value={customFacility}
-                    onChange={(e) => setCustomFacility(e.target.value)}
-                  />
-                  <Button onClick={handleAddFacility} disabled={selectedFacilities.length >= 10}>
-                    Add
-                  </Button>
-                </div>
+                <Input
+                  placeholder="Enter new facility"
+                  value={customFacility}
+                  onChange={(e) => setCustomFacility(e.target.value)}
+                />
+                <Button onClick={handleAddFacility} disabled={selectedFacilities.length >= 10}>
+                  Add
+                </Button>
               </DialogContent>
             </Dialog>
 
