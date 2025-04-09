@@ -8,20 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import axios from "axios";
+import { Location, Category } from "@/interfaces/property";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-
-interface Location {
-  id: number;
-  name: string;
-  parent: Location | null;
-  type: string;
-}
-
-interface Category {
-  id: number;
-  name: string;
-}
 
 export default function AddProperty() {
   const router = useRouter();

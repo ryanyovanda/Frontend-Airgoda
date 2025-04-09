@@ -8,13 +8,7 @@ import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { useToast } from "@/providers/ToastProvider";
-
-
-interface LoginFormValues {
-  email: string;
-  password: string;
-}
-
+import { LoginFormValues } from "@/interfaces/login";
 
 const validationSchema = Yup.object({
   email: Yup.string().email("Invalid email address").required("Email is required"),

@@ -17,6 +17,7 @@ interface User {
   name?: string;
   email?: string;
   isVerified?: boolean;
+  imageUrl?: string;
 }
 
 interface ProfileDetailsProps {
@@ -29,8 +30,9 @@ const nameSchema = z.object({
 });
 
 const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser }) => {
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(user.imageUrl || null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
@@ -45,13 +47,15 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
   const fetchProfileImage = async () => {
     const session = await getSession();
     if (session && session.accessToken && user.id) {
-      const res = await fetch(`${BASE_API_URL}/api/v1/users/${user.id}/profile-image`, {
+      const res = await fetch(`${BASE_API_URL}/users/${user.id}/profile-image`, {
         headers: { Authorization: `Bearer ${session.accessToken}` },
         cache: "no-store",
       });
       if (res.ok) {
         const imageUrl = await res.text();
         setProfileImage(`${imageUrl}?${new Date().getTime()}`);
+        setUser({ imageUrl });
+
       }
     }
   };
@@ -66,11 +70,17 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
-    if (file && file.type.startsWith("image/") && file.size <= 1024 * 1024) {
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        alert("Only image files are allowed.");
+        return;
+      }
+      if (file.size > 1024 * 1024) {
+        alert("File size must be less than 1MB.");
+        return;
+      }
       setSelectedFile(file);
       setProfileImage(URL.createObjectURL(file));
-    } else {
-      alert("Only images under 1MB are allowed.");
     }
   };
 
@@ -78,23 +88,28 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
     setIsUpdating(true);
     try {
       const session = await getSession();
-      if (!session || !session.accessToken) throw new Error("Session expired");
+      if (!session || !session.accessToken) {
+        throw new Error("User session expired. Please log in again.");
+      }
 
       if (selectedFile) {
         const formData = new FormData();
         formData.append("file", selectedFile);
 
-        const res = await fetch(`${BASE_API_URL}/api/v1/users/${user.id}/profile-image`, {
+        const uploadResponse = await fetch(`${BASE_API_URL}/api/v1/users/${user.id}/profile-image`, {
           method: "PUT",
           headers: { Authorization: `Bearer ${session.accessToken}` },
           body: formData,
         });
 
-        if (!res.ok) throw new Error("Failed to upload profile image");
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload profile picture");
+        }
+
         await fetchProfileImage();
       }
 
-      const nameRes = await fetch(`${BASE_API_URL}/api/v1/users/profile`, {
+      const nameResponse = await fetch(`${BASE_API_URL}/api/v1/users/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -103,14 +118,73 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
         body: JSON.stringify({ name: data.name }),
       });
 
-      if (!nameRes.ok) throw new Error("Failed to update name");
+      if (!nameResponse.ok) {
+        throw new Error("Failed to update name");
+      }
 
-      setUser({ name: data.name });
+      setUser({ ...user, name: data.name });
       alert("Profile updated successfully!");
     } catch (error) {
+      console.error("🚨 Error updating profile:", error);
       alert("Something went wrong.");
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const resendVerificationEmail = async () => {
+    setIsResendingVerification(true);
+    try {
+      const session = await getSession();
+      if (!session || !session.accessToken || !session.user?.email) {
+        throw new Error("User session expired or email not found. Please log in again.");
+      }
+
+      const response = await fetch(`${BASE_API_URL}/api/v1/users/resend-verification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({ email: session.user.email }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to resend verification email");
+      }
+
+      alert("Verification email sent successfully!");
+    } catch (error) {
+      console.error("🚨 Error resending verification email:", error);
+      alert("Something went wrong.");
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!user?.email) {
+      setResetMessage("Email not found. Please try again.");
+      return;
+    }
+
+    setResetMessage("🔄 Sending reset email...");
+
+    try {
+      const response = await fetch(`${BASE_API_URL}/api/v1/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to send reset email.");
+      }
+
+      setResetMessage("Reset email sent! Check your inbox.");
+    } catch (error) {
+      setResetMessage("Failed to send reset email. Please try again.");
     }
   };
 
@@ -121,18 +195,49 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-32 h-40 border overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
+          <div className="w-32 h-40 border border-gray-300 shadow-md overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
             {profileImage ? (
-              <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+              <img
+                src={profileImage}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "";
+                  setProfileImage(null);
+                }}
+              />
             ) : (
               <FontAwesomeIcon icon={faFileImage} className="text-gray-500 w-12 h-12" />
             )}
           </div>
 
-          <input type="file" accept="image/*" onChange={handleFileChange} id="fileUpload" hidden />
+          <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" id="fileUpload" />
           <label htmlFor="fileUpload" className="text-sm font-medium text-blue-600 hover:underline cursor-pointer">
             {profileImage ? "Change Picture" : "Upload Picture"}
           </label>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <p className="text-gray-600">
+              Email: <span className="font-semibold">{user.email}</span>
+            </p>
+            {user.isVerified ? (
+              <CheckCircle className="text-green-500" size={20} />
+            ) : (
+              <XCircle className="text-red-500" size={20} />
+            )}
+          </div>
+          {!user.isVerified && (
+            <Button
+              onClick={resendVerificationEmail}
+              disabled={isResendingVerification}
+              size="sm"
+              variant="outline"
+            >
+              <RefreshCcw className="mr-2" /> {isResendingVerification ? "Sending..." : "Resend Verification"}
+            </Button>
+          )}
         </div>
 
         <form onSubmit={handleSubmit(saveChanges)} className="space-y-4">
@@ -145,6 +250,13 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
             {isUpdating ? "Saving..." : "Save Changes"}
           </Button>
         </form>
+
+        <div className="space-y-2 mt-4">
+          <Button variant="outline" onClick={handleResetPassword}>
+            <Lock className="mr-2" /> Reset Password
+          </Button>
+          {resetMessage && <p className="text-center text-sm text-red-500">{resetMessage}</p>}
+        </div>
       </CardContent>
     </Card>
   );

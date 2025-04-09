@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useSession, signOut, getSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 
-const Navbar = ({ profileUpdated }) => {
+const Navbar = ({ profileUpdated }: { profileUpdated?: number }) => {
   const { data: session } = useSession();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [profileImage, setProfileImage] = useState("");

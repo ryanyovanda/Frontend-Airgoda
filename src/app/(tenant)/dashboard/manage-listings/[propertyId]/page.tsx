@@ -11,32 +11,9 @@ import axios from "axios";
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import { Property, Category, Location } from "@/interfaces/property";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-
-interface Location {
-  id: number;
-  name: string;
-  parent: Location | null;
-  type: string;
-}
-
-interface Category {
-  id: number;
-  name: string;
-}
-
-interface Property {
-  id: string;
-  name: string;
-  description: string;
-  categoryId: string;
-  locationId: string;
-  fullAddress: string;
-  isActive: boolean;
-  imageIds: number[];
-  imageUrls: string[];
-}
 
 export default function ManageProperty() {
   const { propertyId } = useParams();

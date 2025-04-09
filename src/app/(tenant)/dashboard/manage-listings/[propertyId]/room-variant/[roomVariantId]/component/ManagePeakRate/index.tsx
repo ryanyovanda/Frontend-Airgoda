@@ -11,14 +11,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import axios, { AxiosError } from "axios"; 
 import { DateRange } from "react-day-picker"; 
+import { PeakRate } from "@/interfaces/roomvariant";
 
-interface PeakRate {
-  id: number;
-  roomVariantId: number;
-  startDate: string;
-  endDate: string;
-  additionalPrice: number;
-}
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 

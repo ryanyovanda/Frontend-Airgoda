@@ -4,12 +4,7 @@ import { FC, useState } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useRouter } from 'next/navigation';
-
-interface RegisterFormValues {
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
+import { RegisterFormValues } from '@/interfaces/register';
 
 const validationSchema = Yup.object({
   email: Yup.string().email('Invalid email address').required('Email is required'),
