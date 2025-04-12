@@ -77,7 +77,7 @@ export default function RoomVariantList() {
     <div className="min-h-screen bg-gray-50 py-12 flex justify-center">
       <Card className="w-full max-w-5xl shadow-xl">
         <CardHeader className="flex flex-row justify-between items-center">
-          <CardTitle className="text-purple-600 text-2xl"><FontAwesomeIcon icon={faBed} className="mr-2" />{propertyName} - Room Variants</CardTitle>
+          <CardTitle className="text-purple-600 text-2xl"><FontAwesomeIcon icon={faBed} className="mr-2 w-7" />{propertyName} - Room Variants</CardTitle>
           <Button onClick={handleAddRoomVariant} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
             <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Room Variant
           </Button>

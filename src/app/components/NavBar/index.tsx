@@ -5,15 +5,33 @@ import { faGlobe, faBars, faUserCircle } from "@fortawesome/free-solid-svg-icons
 import Image from "next/image";
 import Link from "next/link";
 import { useSession, signOut, getSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const Navbar = () => {
+const Navbar = ({ profileUpdated }: { profileUpdated?: number }) => {
   const { data: session } = useSession();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileImage, setProfileImage] = useState("");
 
-  const profileImage: string = session?.user?.imageUrl && session.user.imageUrl.startsWith("http")
-    ? session.user.imageUrl
-    : "";
+  const fetchProfileImage = async () => {
+    if (session?.user?.id) {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/users/${session.user.id}/profile-image`, {
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        });
+
+        if (res.ok) {
+          const imageUrl = await res.text();
+          setProfileImage(imageUrl);
+        }
+      } catch (error) {
+        console.error("Error fetching profile image:", error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchProfileImage();
+  }, [session, profileUpdated]);
 
   const handleLogout = async () => {
     const session = await getSession();
@@ -75,7 +93,7 @@ const Navbar = () => {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
               <FontAwesomeIcon icon={faBars} className="text-gray-600 w-4 h-4" />
-              
+
               {profileImage ? (
                 <Image
                   src={profileImage}

@@ -4,12 +4,8 @@ import { FC, useState } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useRouter } from 'next/navigation';
-
-interface RegisterFormValues {
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
+import { useToast } from '@/providers/ToastProvider';
+import { RegisterFormValues } from '@/interfaces/register';
 
 const validationSchema = Yup.object({
   email: Yup.string().email('Invalid email address').required('Email is required'),
@@ -23,6 +19,7 @@ const RegisterTenantPage: FC = () => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const {showToast} = useToast();
 
   const handleSubmit = async (
     values: RegisterFormValues,
@@ -46,10 +43,14 @@ const RegisterTenantPage: FC = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed');
+      if (response.status === 400 && errorData.message.includes("email_unique")) {
+        throw new Error("This email is already registered. Please use a different email.");
       }
 
-      alert('Registration successful! Redirecting to login...');
+      throw new Error(errorData.message || 'Registration failed');
+    }
+
+      showToast("Registration Success", "success");
       router.push('/login');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');

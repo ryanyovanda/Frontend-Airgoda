@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format, differenceInDays, isWithinInterval } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { DateRange } from "react-day-picker";
+import { useToast } from "@/providers/ToastProvider";
 
 interface RoomVariant {
   id: number;
@@ -42,6 +43,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
   const [loading, setLoading] = useState<boolean>(false);
   const [totalPrice, setTotalPrice] = useState<number>(0);
   const [peakRates, setPeakRates] = useState<PeakRate[]>([]);
+  const {showToast} = useToast();
 
 
   useEffect(() => {
@@ -128,14 +130,14 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
     setLoading(true);
 
     if (!dateRange?.from || !dateRange?.to || !selectedRoom) {
-      alert("Please select a valid date range.");
+      showToast("Please select a valid date range.");
       setLoading(false);
       return;
     }
 
     const session = await fetchSession();
     if (!session?.accessToken || !session?.user?.id) {
-      alert("Session expired. Please log in again.");
+      showToast("Session expired. Please log in again.","error");
       setLoading(false);
       return;
     }
@@ -172,11 +174,11 @@ const BookingForm: React.FC<BookingFormProps> = ({ propertyId, roomVariants = []
         throw new Error(errorData.message || "Booking failed.");
       }
 
-      alert("🎉 Booking successful!");
+      showToast(" Booking successful!","success");
       router.push("/dashboard");
     } catch (error) {
       console.error(" Booking error:", error);
-      alert(error instanceof Error ? error.message : "An unexpected error occurred.");
+      showToast(error instanceof Error ? error.message : "An unexpected error occurred.","error");
     } finally {
       setLoading(false);
     }

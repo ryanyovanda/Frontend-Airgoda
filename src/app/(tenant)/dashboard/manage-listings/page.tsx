@@ -96,7 +96,7 @@ export default function ManageListings() {
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle className="text-purple-600 text-2xl"><FontAwesomeIcon icon={faHouse} className="mr-2" /> Manage Your Listings</CardTitle>
           <Button onClick={() => router.push("/dashboard/manage-listings/new")}>
-            <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add New Property
+            <FontAwesomeIcon icon={faPlus} className="mr-2 w-7" /> Add New Property
           </Button>
         </CardHeader>
 

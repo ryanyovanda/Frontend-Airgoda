@@ -10,24 +10,8 @@ import PriceCalendar from "@/app/components/PriceCalender";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
-
-interface RoomVariant {
-  id: number;
-  name: string;
-  propertyId: number;
-  price: number;
-  facilities?: string[];
-}
-
-interface PropertyDetailsProps {
-  data: {
-    id: number;
-    name: string;
-    description: string;
-    location?: { name?: string };
-    imageUrls?: string[];
-  };
-}
+import { RoomVariant } from "@/interfaces/roomvariant";
+import { PropertyDetailsProps } from "@/interfaces/property";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
