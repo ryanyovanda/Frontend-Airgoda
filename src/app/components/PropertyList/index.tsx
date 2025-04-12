@@ -79,7 +79,7 @@ export default function PropertyList({ initialCategories, initialLocations }: Pr
     };
 
     fetchProperties();
-  }, [locationId, categoryId, page]);
+  }, [locationId, categoryId, page, searchQuery]);
 
   const updateURL = (newParams: { categoryId?: string; locationId?: string; keyword?: string; page?: number }) => {
     const params = new URLSearchParams(searchParams.toString());

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useToast } from "@/providers/ToastProvider";
 
 const VerifyEmailPage = () => {
   const { data: session, status } = useSession(); 
@@ -11,6 +12,7 @@ const VerifyEmailPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const {showToast} = useToast();
 
   useEffect(() => {
     if (status === "loading") return;
@@ -50,7 +52,7 @@ const VerifyEmailPage = () => {
         }
 
         setStatusMessage("success");
-        alert(" Email successfully verified! Redirecting...");
+        showToast(" Email successfully verified! Redirecting...","success");
         setTimeout(() => {
           router.push("/dashboard/profile"); 
         }, 2000);

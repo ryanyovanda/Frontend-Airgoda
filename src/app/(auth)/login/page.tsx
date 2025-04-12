@@ -23,10 +23,7 @@ const LoginPage: FC = () => {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      const result = await signIn("google", { callbackUrl: "/" });
-      if (!result?.ok) {
-        showToast("Google login failed. Please try again.", "error");
-      }
+      signIn("google", { callbackUrl: "/" });
     } catch (error) {
       console.error("Google login error:", error);
       showToast("An unexpected error occurred. Please try again.", "error");
@@ -47,12 +44,12 @@ const LoginPage: FC = () => {
         password: values.password,
       });
 
-      if (!result?.ok) {
-        showToast(result?.error || "Invalid email or password", "error");
+      if (result?.error) {
+        showToast("Invalid email or password", "error");
       } else {
         showToast("Login successful!", "success");
         router.push("/");
-      }
+      }      
     } catch (error) {
       console.error("Login error:", error);
       showToast("An unexpected error occurred. Please try again.", "error");

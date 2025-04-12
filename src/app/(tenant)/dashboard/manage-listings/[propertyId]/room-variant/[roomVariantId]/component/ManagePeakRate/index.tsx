@@ -7,11 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
 import { format } from "date-fns";
 import axios, { AxiosError } from "axios"; 
 import { DateRange } from "react-day-picker"; 
 import { PeakRate } from "@/interfaces/roomvariant";
+import { useToast } from "@/providers/ToastProvider";
+import { useConfirmDeleteDialog } from "@/hooks/useConfirmDeleteDialog";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
@@ -24,6 +34,14 @@ const ManagePeakRates = () => {
   const [selectedDates, setSelectedDates] = useState<DateRange | undefined>(undefined);
   const [additionalPrice, setAdditionalPrice] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
+  const { showToast } = useToast();
+
+  const {
+    isOpen,
+    targetId,
+    openDialog,
+    closeDialog
+  } = useConfirmDeleteDialog();
 
   useEffect(() => {
     fetchPeakRates();
@@ -31,79 +49,87 @@ const ManagePeakRates = () => {
 
   const fetchPeakRates = async () => {
     try {
-      
       const response = await axios.get(`${BACKEND_URL}/peak-rates`);
       const allPeakRates: PeakRate[] = response.data;
 
       const filteredPeakRates = allPeakRates.filter(rate => rate.roomVariantId === roomVariantId);
-
-      
       setPeakRates(filteredPeakRates);
     } catch (error) {
       console.error("Error fetching peak rates:", error);
-      toast.error("Failed to fetch peak rates.");
+      showToast("Failed to fetch peak rates.", "error");
     }
   };
 
   const handleAddPeakRate = async () => {
-  
     if (!selectedDates || !selectedDates.from || !selectedDates.to || additionalPrice <= 0 || isNaN(additionalPrice)) {
-      toast.error("Please select valid dates and enter a valid price.");
-     
+      showToast("Please select valid dates and enter a valid price.", "error");
       return;
     }
-  
+
     setLoading(true);
-  
+
     const newPeakRate = {
       roomVariantId: roomVariantId,
       startDate: format(selectedDates.from, "yyyy-MM-dd"),
       endDate: format(selectedDates.to, "yyyy-MM-dd"),
       additionalPrice,
     };
-  
-    
-  
+
     try {
       const session = await axios.get("/api/auth/session");
       const accessToken = session.data.accessToken;
-     
-      const response = await axios.post(`${BACKEND_URL}/peak-rates`, newPeakRate, {
-        headers: { "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`, 
+
+      await axios.post(`${BACKEND_URL}/peak-rates`, newPeakRate, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
-        
       });
-  
-      
-      toast.success("Peak rate added successfully!");
-      fetchPeakRates(); 
+
+      showToast("Peak rate added successfully!", "success");
+      fetchPeakRates();
     } catch (error) {
       const axiosError = error as AxiosError;
-      console.error(" Error adding peak rate:", axiosError.response?.data || axiosError.message);
-      toast.error("Failed to add peak rate.");
+      console.error("Error adding peak rate:", axiosError.response?.data || axiosError.message);
+      showToast("Choose another date, peak rate already added", "error");
     } finally {
       setLoading(false);
     }
   };
-  
+
+  const handleDeletePeakRate = async (peakRateId: number) => {
+    try {
+      const session = await axios.get("/api/auth/session");
+      const accessToken = session.data.accessToken;
+
+      await axios.delete(`${BACKEND_URL}/peak-rates/${peakRateId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      showToast("Peak rate deleted successfully!", "success");
+      fetchPeakRates();
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      console.error("Error deleting peak rate:", axiosError.response?.data || axiosError.message);
+      showToast("Failed to delete peak rate", "error");
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12 flex justify-center">
-      <Card className="w-full max-w-3xl shadow-xl">
+    <div className="min-h-screen bg-gray-50 py-12 flex justify-center flex-col ">
+      <Card className="w-full max-w-3xl shadow-xl flex justify-center items-center flex-col">
         <CardHeader>
-          <CardTitle className="text-xl">📅 Manage Peak Rates</CardTitle>
+          <CardTitle className="text-xl">Manage Peak Rates</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
-          <Calendar
-  mode="range"
-  selected={selectedDates} 
-  onSelect={(range) => {
-    
-    setSelectedDates(range || undefined); 
-  }}
-/>
-
+            <Calendar
+              mode="range"
+              selected={selectedDates}
+              onSelect={(range) => setSelectedDates(range || undefined)}
+            />
           </div>
 
           <div className="mb-4">
@@ -113,7 +139,6 @@ const ManagePeakRates = () => {
               value={additionalPrice}
               onChange={(e) => {
                 const price = parseInt(e.target.value);
-               
                 setAdditionalPrice(price || 0);
               }}
             />
@@ -128,7 +153,7 @@ const ManagePeakRates = () => {
       <div className="mt-6 w-full max-w-3xl">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">📌 Existing Peak Rates for this Room Variant</CardTitle>
+            <CardTitle className="text-lg">Existing Peak Rates for this Room Variant</CardTitle>
           </CardHeader>
           <CardContent>
             {peakRates.length === 0 ? (
@@ -140,6 +165,7 @@ const ManagePeakRates = () => {
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
                     <TableHead>Additional Price</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -148,6 +174,15 @@ const ManagePeakRates = () => {
                       <TableCell>{rate.startDate}</TableCell>
                       <TableCell>{rate.endDate}</TableCell>
                       <TableCell>Rp {rate.additionalPrice.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => openDialog(rate.id)}
+                        >
+                          Delete
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -156,6 +191,34 @@ const ManagePeakRates = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isOpen} onOpenChange={closeDialog}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Are you sure?</DialogTitle>
+          <DialogDescription>
+            This will permanently delete the selected peak rate. This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="ghost" onClick={closeDialog}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              if (targetId !== null) {
+                handleDeletePeakRate(targetId);
+                closeDialog();
+              }
+            }}
+          >
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     </div>
   );
 };

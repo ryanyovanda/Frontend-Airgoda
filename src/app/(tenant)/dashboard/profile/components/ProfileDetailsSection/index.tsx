@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, XCircle, RefreshCcw, Lock } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileImage } from "@fortawesome/free-solid-svg-icons";
+import { useToast } from "@/providers/ToastProvider";
 
 interface User {
   id: string;
@@ -36,6 +37,7 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
   const [isUpdating, setIsUpdating] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
+  const {showToast} = useToast();
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(nameSchema),
@@ -72,11 +74,11 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
     const file = event.target.files?.[0] || null;
     if (file) {
       if (!file.type.startsWith("image/")) {
-        alert("Only image files are allowed.");
+        showToast("Only image files are allowed.","error");
         return;
       }
       if (file.size > 1024 * 1024) {
-        alert("File size must be less than 1MB.");
+        showToast("File size must be less than 1MB.","error");
         return;
       }
       setSelectedFile(file);
@@ -123,10 +125,10 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
       }
 
       setUser({ ...user, name: data.name });
-      alert("Profile updated successfully!");
+      showToast("Profile updated successfully!","success");
     } catch (error) {
       console.error("🚨 Error updating profile:", error);
-      alert("Something went wrong.");
+      showToast("Something went wrong.","error");
     } finally {
       setIsUpdating(false);
     }
@@ -153,10 +155,10 @@ const ProfileDetailsSection: React.FC<ProfileDetailsProps> = ({ user, setUser })
         throw new Error("Failed to resend verification email");
       }
 
-      alert("Verification email sent successfully!");
+      showToast("Verification email sent successfully!","success");
     } catch (error) {
       console.error("🚨 Error resending verification email:", error);
-      alert("Something went wrong.");
+      showToast("Something went wrong.","error");
     } finally {
       setIsResendingVerification(false);
     }

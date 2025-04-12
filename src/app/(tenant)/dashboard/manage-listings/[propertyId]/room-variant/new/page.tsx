@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import axios from "axios";
+import {faHouse } from "@fortawesome/free-solid-svg-icons";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
@@ -130,6 +131,12 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                             id="facility"
                             value={facilityInput}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFacilityInput(e.target.value)}
+                            onKeyDown={(e) =>{
+                                if (e.key === "Enter"){
+                                    e.preventDefault();
+                                    handleAddFacility();
+                                }
+                            }}
                             placeholder="Add a facility"
                         />
                         <Button type="button" onClick={handleAddFacility} className="bg-blue-600 hover:bg-blue-700 text-white">

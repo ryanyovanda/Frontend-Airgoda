@@ -5,6 +5,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useRouter } from 'next/navigation';
 import { RegisterFormValues } from '@/interfaces/register';
+import { useToast } from "@/providers/ToastProvider";
 
 const validationSchema = Yup.object({
   email: Yup.string().email('Invalid email address').required('Email is required'),
@@ -17,6 +18,7 @@ const validationSchema = Yup.object({
 const RegisterPage: FC = () => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (
@@ -49,7 +51,7 @@ const RegisterPage: FC = () => {
     }
 
 
-      alert('Registration successful! Redirecting to login...');
+      showToast("Registration Success", "success");
       router.push('/login');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');

@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import axios from "axios";
 import { Location, Category } from "@/interfaces/property";
+import { faHouse } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
@@ -168,7 +170,7 @@ export default function AddProperty() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
       <Card className="max-w-2xl w-full shadow-xl rounded-2xl border-purple-400">
         <CardHeader>
-          <CardTitle className="text-purple-600 text-2xl">✨ Add New Property</CardTitle>
+          <CardTitle className="text-purple-600 text-2xl"><FontAwesomeIcon icon={faHouse} className="mr-2 w-7"/> Add New Property</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">

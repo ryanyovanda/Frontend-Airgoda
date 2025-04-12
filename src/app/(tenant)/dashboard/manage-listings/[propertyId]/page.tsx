@@ -316,7 +316,7 @@ export default function ManageProperty() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
       <Card className="max-w-2xl w-full shadow-xl rounded-2xl border-purple-400">
         <CardHeader>
-          <CardTitle className="text-purple-600 text-2xl"><FontAwesomeIcon icon={faPenToSquare} className="mr-2" /> Edit Property</CardTitle>
+          <CardTitle className="text-purple-600 text-2xl"><FontAwesomeIcon icon={faPenToSquare} className="mr-2 w-7" /> Edit Property</CardTitle>
         </CardHeader>
         <CardContent>
           {property ? (
