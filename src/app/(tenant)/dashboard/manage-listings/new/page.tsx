@@ -11,6 +11,8 @@ import axios from "axios";
 import { Location, Category } from "@/interfaces/property";
 import { faHouse } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
@@ -34,6 +36,9 @@ export default function AddProperty() {
   const [selectedIsland, setSelectedIsland] = useState<number | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<number | null>(null);
   const [selectedCity, setSelectedCity] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+const [dialogOpen, setDialogOpen] = useState(false);
+
 
   useEffect(() => {
     async function fetchTenantId() {
@@ -70,12 +75,21 @@ export default function AddProperty() {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
+  
+    const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
     const selectedFiles = Array.from(e.target.files);
+    const invalidFiles = selectedFiles.filter((file) => !allowedTypes.includes(file.type));
+  
+    if (invalidFiles.length > 0) {
+      toast.error("Only JPG, JPEG, and PNG files are allowed.");
+      return;
+    }
+  
     setImages((prevImages) => [...prevImages, ...selectedFiles]);
     const newPreviews = selectedFiles.map((file) => URL.createObjectURL(file));
     setImagePreviews((prevPreviews) => [...prevPreviews, ...newPreviews]);
   };
-
+  
   const handleRemoveImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
@@ -119,7 +133,7 @@ export default function AddProperty() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     if (
       !property.name ||
       !property.description ||
@@ -130,7 +144,9 @@ export default function AddProperty() {
       toast.error("Please fill all required fields.");
       return;
     }
-
+  
+    setIsUploading(true);
+  
     const formData = new FormData();
     formData.append(
       "data",
@@ -142,29 +158,30 @@ export default function AddProperty() {
         tenantId: Number(property.tenantId),
         locationId: Number(property.locationId),
         fullAddress: property.fullAddress,
-       
       })
     );
-
+  
     images.forEach((file) => formData.append("images", file));
-
+  
     try {
       const session = await axios.get("/api/auth/session");
       const accessToken = session.data.accessToken;
-
+  
       await axios.post(`${API_BASE_URL}/api/properties`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${accessToken}`,
         },
       });
-
-      toast.success("Property added successfully!");
-      router.push("/dashboard/manage-listings");
+  
+      setDialogOpen(true);
     } catch (error) {
       toast.error("Failed to add property.");
+    } finally {
+      setIsUploading(false);
     }
   };
+  
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
@@ -251,14 +268,36 @@ export default function AddProperty() {
     ))}
   </div>
 )}
-            <Input type="file" multiple accept="image/*" onChange={handleImageChange} />
+            <Input
+              type="file"
+              multiple
+              accept=".jpg, .jpeg, .png, image/jpeg, image/png, image/jpg"
+              onChange={handleImageChange}
+            />
 
-            <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700">
-              Save Property
+
+            <Button 
+            type="submit" 
+            className="w-full bg-purple-600 hover:bg-purple-700" 
+            disabled={isUploading}>
+            {isUploading ? "Uploading..." : "Save Property"}
             </Button>
+
           </form>
         </CardContent>
       </Card>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+  <DialogContent>
+    <DialogTitle>Success</DialogTitle>
+    <DialogDescription>
+      Property added successfully!
+    </DialogDescription>
+    <Button onClick={() => router.push("/dashboard/manage-listings")}>
+      OK
+    </Button>
+  </DialogContent>
+</Dialog>
+
     </div>
   );
 }
