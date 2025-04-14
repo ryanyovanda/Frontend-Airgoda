@@ -11,6 +11,7 @@ import axios from "axios";
 import { Location, Category } from "@/interfaces/property";
 import { faHouse } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useToast } from "@/providers/ToastProvider";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 
@@ -38,6 +39,7 @@ export default function AddProperty() {
   const [selectedCity, setSelectedCity] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 const [dialogOpen, setDialogOpen] = useState(false);
+const {showToast} = useToast();
 
 
   useEffect(() => {
@@ -77,11 +79,15 @@ const [dialogOpen, setDialogOpen] = useState(false);
     if (!e.target.files) return;
   
     const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+    const maxSize = 1 * 1024 * 1024; // 1MB
     const selectedFiles = Array.from(e.target.files);
-    const invalidFiles = selectedFiles.filter((file) => !allowedTypes.includes(file.type));
+  
+    const invalidFiles = selectedFiles.filter(
+      (file) => !allowedTypes.includes(file.type) || file.size > maxSize
+    );
   
     if (invalidFiles.length > 0) {
-      toast.error("Only JPG, JPEG, and PNG files are allowed.");
+      showToast("Only JPG, JPEG, PNG files under 1MB are allowed.","error");
       return;
     }
   

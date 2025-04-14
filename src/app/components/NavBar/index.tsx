@@ -66,7 +66,7 @@ const Navbar = ({ profileUpdated }: { profileUpdated?: number }) => {
 
   return (
     <nav className="flex justify-between items-center p-4 relative">
-      <div className="flex items-center">
+      <div className="flex items-center md:ml-16">
         <Link href="/">
           <Image src="/logo.png" alt="Airbnb Logo" width={100} height={40} />
         </Link>
@@ -83,7 +83,7 @@ const Navbar = ({ profileUpdated }: { profileUpdated?: number }) => {
         </div>
       )}
 
-      <div className="flex items-center space-x-6">
+      <div className="flex items-center space-x-6 md:mr-16">
         <FontAwesomeIcon icon={faGlobe} className="text-gray-600 w-5 h-5 cursor-pointer" />
 
         {session ? (

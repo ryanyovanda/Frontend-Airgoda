@@ -37,7 +37,7 @@ const SearchBar = () => {
     <div className="relative w-full flex flex-col items-center mb-6">
       <form 
         onSubmit={handleSearch} 
-        className="w-2/5 h-[70px] bg-white p-4 rounded-full shadow-lg flex items-center space-x-4 border-gray-300 border">
+        className="sm:w-full md:w-2/5 h-[70px] bg-white p-4 rounded-full shadow-lg flex items-center space-x-4 border-gray-300 border">
         
         <input
           type="text"
